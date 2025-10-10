@@ -9,19 +9,19 @@ If you want the RPC ports exposed locally, use `rpc-shared.yml` in `COMPOSE_FILE
 
 ## Quick Start
 
-The `./projectd` script can be used as a quick-start:
+The `./<project>d` script can be used as a quick-start:
 
-`./projectd install` brings in docker-ce, if you don't have Docker installed already.
+`./<project>d install` brings in docker-ce, if you don't have Docker installed already.
 
 `cp default.env .env`
 
 `nano .env` and adjust variables as needed, particularly mention-important-vars-here
 
-`./projectd up`
+`./<project>d up`
 
 ## Software update
 
-To update the software, run `./projectd update` and then `./projectd up`
+To update the software, run `./<project>d update` and then `./<project>d up`
 
 ## Customization
 
