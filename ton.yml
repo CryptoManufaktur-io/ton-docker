@@ -1,0 +1,84 @@
+# ton.yaml
+x-logging: &logging
+  logging:
+    driver: json-file
+    options:
+      max-size: 100m
+      max-file: "3"
+      tag: '{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}'
+
+services:
+  ton-init:
+    restart: "no"
+    build:
+      context: ./init
+      dockerfile: Dockerfile
+    image: init:ton
+    pull_policy: never
+    environment:
+      # init container controls dump download/extract into /var/ton-work
+      - USE_TON_DUMP=${USE_TON_DUMP:-true}
+      - TON_WORK_DIR=${TON_WORK_DIR:-/var/ton-work}
+      - GLOBAL_CONFIG_URL=${GLOBAL_CONFIG_URL:-https://ton.org/global.config.json}
+      - DUMP_BASE_URL=${DUMP_BASE_URL:-https://dump.ton.org}
+      - DUMP_NAME=${DUMP_NAME:-latest}
+      - DUMP_THREADS=${DUMP_THREADS:-}
+
+    volumes:
+      - ton-work:/var/ton-work
+      - /etc/localtime:/etc/localtime:ro
+    <<: *logging
+
+  ton:
+    restart: unless-stopped
+    build:
+      context: ./ton
+      dockerfile: ${TON_DOCKERFILE:-Dockerfile.binary}
+      args:
+        - DOCKER_TAG=${TON_DOCKER_TAG}
+        - DOCKER_REPO=${TON_DOCKER_REPO}
+    image: ton:${TON_NETWORK:-mainnet}
+    pull_policy: never
+    stop_grace_period: 5m
+    environment:
+      # Required by ton-docker-ctrl entrypoint
+      - PUBLIC_IP=${PUBLIC_IP}
+
+      # Standard ton-docker-ctrl/mytonctrl envs
+      - GLOBAL_CONFIG_URL=${GLOBAL_CONFIG_URL:-https://ton.org/global.config.json}
+      - MYTONCTRL_VERSION=${MYTONCTRL_VERSION:-master}
+      - TELEMETRY=${TELEMETRY:-true}
+      - IGNORE_MINIMAL_REQS=${IGNORE_MINIMAL_REQS:-true}
+      - MODE=${MODE:-liteserver}
+      # Keep DUMP=false here since the init container handles dump download
+      - DUMP=${DUMP:-false}
+      - ARCHIVE_TTL=${ARCHIVE_TTL:-2592000}
+      - STATE_TTL=${STATE_TTL:-86400}
+      - VERBOSITY=${VERBOSITY:-1}
+
+      # Optional fixed ports (set in .env if you want stable ports)
+      - LITESERVER_PORT=${LITESERVER_PORT:-}
+      - VALIDATOR_PORT=${VALIDATOR_PORT:-}
+      - VALIDATOR_CONSOLE_PORT=${VALIDATOR_CONSOLE_PORT:-}
+
+      # Wrapper behavior (your docker-entrypoint.sh can use this)
+      - WAIT_FOR_DUMP=${WAIT_FOR_DUMP:-true}
+      - TON_WORK_DIR=${TON_WORK_DIR:-/var/ton-work}
+
+    volumes:
+      - ton-work:/var/ton-work
+      - mytoncore:/usr/local/bin/mytoncore
+      - /etc/localtime:/etc/localtime:ro
+
+    # TON commonly uses host networking (dynamic liteserver port / UDP+TCP simplicity)
+    network_mode: host
+
+    depends_on:
+      ton-init:
+        condition: service_completed_successfully
+
+    <<: *logging
+
+volumes:
+  ton-work:
+  mytoncore:
