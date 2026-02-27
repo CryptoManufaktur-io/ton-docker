@@ -64,10 +64,6 @@ services:
       - ${VALIDATOR_PORT}:${VALIDATOR_PORT}/udp
       - ${LITESERVER_PORT}:${LITESERVER_PORT}/tcp
       - ${VALIDATOR_CONSOLE_PORT}:${VALIDATOR_CONSOLE_PORT}/tcp
-
-    # TON commonly uses host networking (dynamic liteserver port / UDP+TCP simplicity)
-    network_mode: host
-
     depends_on:
       ton-init:
         condition: service_completed_successfully
