@@ -41,34 +41,29 @@ services:
     pull_policy: never
     stop_grace_period: 5m
     environment:
-      # Required by ton-docker-ctrl entrypoint
       - PUBLIC_IP=${PUBLIC_IP}
-
-      # Standard ton-docker-ctrl/mytonctrl envs
       - GLOBAL_CONFIG_URL=${GLOBAL_CONFIG_URL:-https://ton.org/global.config.json}
       - MYTONCTRL_VERSION=${MYTONCTRL_VERSION:-master}
       - TELEMETRY=${TELEMETRY:-true}
       - IGNORE_MINIMAL_REQS=${IGNORE_MINIMAL_REQS:-true}
       - MODE=${MODE:-liteserver}
-      # Keep DUMP=false here since the init container handles dump download
       - DUMP=${DUMP:-false}
       - ARCHIVE_TTL=${ARCHIVE_TTL:-2592000}
       - STATE_TTL=${STATE_TTL:-86400}
       - VERBOSITY=${VERBOSITY:-1}
-
-      # Optional fixed ports (set in .env if you want stable ports)
       - LITESERVER_PORT=${LITESERVER_PORT:-}
       - VALIDATOR_PORT=${VALIDATOR_PORT:-}
       - VALIDATOR_CONSOLE_PORT=${VALIDATOR_CONSOLE_PORT:-}
-
-      # Wrapper behavior (your docker-entrypoint.sh can use this)
       - WAIT_FOR_DUMP=${WAIT_FOR_DUMP:-true}
       - TON_WORK_DIR=${TON_WORK_DIR:-/var/ton-work}
-
     volumes:
       - ton-work:/var/ton-work
       - mytoncore:/usr/local/bin/mytoncore
       - /etc/localtime:/etc/localtime:ro
+    ports:
+      - ${VALIDATOR_PORT}:${VALIDATOR_PORT}/udp
+      - ${LITESERVER_PORT}:${LITESERVER_PORT}/tcp
+      - ${VALIDATOR_CONSOLE_PORT}:${VALIDATOR_CONSOLE_PORT}/tcp
 
     # TON commonly uses host networking (dynamic liteserver port / UDP+TCP simplicity)
     network_mode: host
