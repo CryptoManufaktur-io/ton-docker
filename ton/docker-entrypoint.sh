@@ -7,7 +7,7 @@ set -euo pipefail
 TON_WORK_DIR="${TON_WORK_DIR:-/var/ton-work}"
 
 # If using init dump, optionally wait for marker so node doesn't start too early
-if [[ "${WAIT_FOR_DUMP:-true}" == "true" ]]; then
+if [[ "${WAIT_FOR_DUMP:-false}" == "true" && "${USE_TON_DUMP:-false}" == "true" ]]; then
   if [[ -f "${TON_WORK_DIR}/db/dump_done" ]]; then
     echo "[ton] dump_done already present."
   else

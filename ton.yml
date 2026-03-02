@@ -17,11 +17,11 @@ services:
     pull_policy: never
     environment:
       # init container controls dump download/extract into /var/ton-work
-      - USE_TON_DUMP=${USE_TON_DUMP:-true}
+      - USE_TON_DUMP=${USE_TON_DUMP:-false}
       - TON_WORK_DIR=${TON_WORK_DIR:-/var/ton-work}
       - GLOBAL_CONFIG_URL=${GLOBAL_CONFIG_URL:-https://ton.org/global.config.json}
       - DUMP_BASE_URL=${DUMP_BASE_URL:-https://dump.ton.org}
-      - DUMP_NAME=${DUMP_NAME:-latest}
+      - DUMP_NAME=${DUMP_NAME:-}
       - DUMP_THREADS=${DUMP_THREADS:-}
 
     volumes:
@@ -42,8 +42,9 @@ services:
     pull_policy: never
     stop_grace_period: 5m
     environment:
+      - TON_BRANCH=${TON_BRANCH:-latest}
       - PUBLIC_IP=${PUBLIC_IP}
-      - GLOBAL_CONFIG_URL=${GLOBAL_CONFIG_URL:-https://ton.org/global.config.json}
+      - GLOBAL_CONFIG_URL=${GLOBAL_CONFIG_URL}
       - MYTONCTRL_VERSION=${MYTONCTRL_VERSION:-master}
       - TELEMETRY=${TELEMETRY:-true}
       - IGNORE_MINIMAL_REQS=${IGNORE_MINIMAL_REQS:-true}
@@ -55,7 +56,7 @@ services:
       - LITESERVER_PORT=${LITESERVER_PORT:-}
       - VALIDATOR_PORT=${VALIDATOR_PORT:-}
       - VALIDATOR_CONSOLE_PORT=${VALIDATOR_CONSOLE_PORT:-}
-      - WAIT_FOR_DUMP=${WAIT_FOR_DUMP:-true}
+      - WAIT_FOR_DUMP=${WAIT_FOR_DUMP:-false}
       - TON_WORK_DIR=${TON_WORK_DIR:-/var/ton-work}
     volumes:
       - ton-work:/var/ton-work

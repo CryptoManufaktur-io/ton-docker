@@ -12,7 +12,9 @@ DUMP_THREADS="${DUMP_THREADS:-}"
 mkdir -p "${DB_DIR}"
 
 if [[ "${USE_TON_DUMP}" != "true" ]]; then
-  echo "[ton-init] USE_TON_DUMP=false; nothing to do."
+  echo "[ton-init] USE_TON_DUMP=false; creating dump_done marker."
+  mkdir -p "${DB_DIR}"
+  touch "${DB_DIR}/dump_done"
   exit 0
 fi
 
