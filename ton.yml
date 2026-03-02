@@ -64,9 +64,9 @@ services:
       - mytoncore:/usr/local/bin/mytoncore
       - /etc/localtime:/etc/localtime:ro
     ports:
-      - ${VALIDATOR_PORT}:${VALIDATOR_PORT}/udp
-      - ${LITESERVER_PORT}:${LITESERVER_PORT}/tcp
-      - ${VALIDATOR_CONSOLE_PORT}:${VALIDATOR_CONSOLE_PORT}/tcp
+      - ${VALIDATOR_PORT:-30001}:${VALIDATOR_PORT:-30001}/udp
+      - ${LITESERVER_PORT:-30003}:${LITESERVER_PORT:-30003}/tcp
+      - ${VALIDATOR_CONSOLE_PORT:-30002}:${VALIDATOR_CONSOLE_PORT:-30002}/tcp
     depends_on:
       ton-init:
         condition: service_completed_successfully
