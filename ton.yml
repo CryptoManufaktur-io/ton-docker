@@ -38,7 +38,7 @@ services:
       args:
         - DOCKER_TAG=${TON_DOCKER_TAG}
         - DOCKER_REPO=${TON_DOCKER_REPO}
-    image: ton:${TON_NETWORK:-mainnet}
+    image: ton:${TON_NETWORK:-latest}
     pull_policy: never
     stop_grace_period: 5m
     environment:
