@@ -1,4 +1,3 @@
-# ton.yaml
 x-logging: &logging
   logging:
     driver: json-file
@@ -16,14 +15,12 @@ services:
     image: init:ton
     pull_policy: never
     environment:
-      # init container controls dump download/extract into /var/ton-work
       - USE_TON_DUMP=${USE_TON_DUMP:-false}
       - TON_WORK_DIR=${TON_WORK_DIR:-/var/ton-work}
       - GLOBAL_CONFIG_URL=${GLOBAL_CONFIG_URL:-https://ton.org/global.config.json}
       - DUMP_BASE_URL=${DUMP_BASE_URL:-https://dump.ton.org}
       - DUMP_NAME=${DUMP_NAME:-}
       - DUMP_THREADS=${DUMP_THREADS:-}
-
     volumes:
       - ton-work:/var/ton-work
       - /etc/localtime:/etc/localtime:ro
@@ -70,7 +67,6 @@ services:
     depends_on:
       ton-init:
         condition: service_completed_successfully
-
     <<: *logging
 
 volumes:

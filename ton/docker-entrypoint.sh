@@ -1,12 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Fail fast so missing config is obvious in container logs.
 : "${PUBLIC_IP:?PUBLIC_IP must be set (public IPv4) for TON node to start}"
 
 TON_WORK_DIR="${TON_WORK_DIR:-/var/ton-work}"
 
-# If using init dump, optionally wait for marker so node doesn't start too early
 if [[ "${WAIT_FOR_DUMP:-false}" == "true" && "${USE_TON_DUMP:-false}" == "true" ]]; then
   if [[ -f "${TON_WORK_DIR}/db/dump_done" ]]; then
     echo "[ton] dump_done already present."
@@ -33,5 +31,4 @@ if [[ -f "${TON_WORK_DIR}/db/mtc_done" ]]; then
   fi
 fi
 
-# Hand off to upstream entrypoint (ton-docker-ctrl image)
 exec /scripts/entrypoint.sh "$@"
