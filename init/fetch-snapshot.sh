@@ -37,7 +37,11 @@ echo "[ton-init] Snapshot: ${DUMP_NAME}"
 echo "[ton-init] Size URL: ${URL_SIZE}"
 echo "[ton-init] Dump URL: ${URL_DUMP}"
 
-DUMPSIZE="$(aria2c --max-tries=5 --retry-wait=5 --console-log-level=error --summary-interval=0 --allow-overwrite=true -d /tmp -o dump_size.txt "${URL_SIZE}" >/dev/null 2>&1 && cat /tmp/dump_size.txt && rm -f /tmp/dump_size.txt || true)"
+DUMPSIZE=""
+if aria2c --max-tries=5 --retry-wait=5 --console-log-level=error --summary-interval=0 --allow-overwrite=true -d /tmp -o dump_size.txt "${URL_SIZE}" >/dev/null 2>&1; then
+  DUMPSIZE="$(cat /tmp/dump_size.txt)"
+  rm -f /tmp/dump_size.txt
+fi
 if [[ -z "${DUMPSIZE}" ]]; then
   echo "[ton-init] Could not fetch dump size from ${URL_SIZE}"
   exit 1

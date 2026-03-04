@@ -47,7 +47,12 @@ services:
       - TON_API_GUNICORN_FLAGS=${TON_API_GUNICORN_FLAGS:-}
     volumes:
       - ton-api-config:/shared-config:ro
-    command: -c "gunicorn -k uvicorn.workers.UvicornWorker -w ${TON_API_WEBSERVERS_WORKERS:-1} --bind 0.0.0.0:8081 ${TON_API_GUNICORN_FLAGS} pyTON.main:app"
+    # codespell:ignore pyTON
+    command: >-
+      -c "gunicorn -k uvicorn.workers.UvicornWorker
+      -w ${TON_API_WEBSERVERS_WORKERS:-1}
+      --bind 0.0.0.0:8081 ${TON_API_GUNICORN_FLAGS}
+      pyTON.main:app"
     healthcheck:
       test: curl -sS http://127.0.0.1:8081${TON_API_ROOT_PATH:-/}healthcheck || exit 1
       interval: 30s
