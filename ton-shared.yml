@@ -1,0 +1,7 @@
+# exposes rpc ports locally instead of via traefik
+# add to COMPOSE_FILE: ton.yml:ton-shared.yml
+services:
+  ton:
+    ports:
+      - ${LITESERVER_PORT:-30003}:${LITESERVER_PORT:-30003}/tcp
+      - ${VALIDATOR_CONSOLE_PORT:-30002}:${VALIDATOR_CONSOLE_PORT:-30002}/tcp

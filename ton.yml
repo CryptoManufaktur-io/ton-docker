@@ -15,12 +15,8 @@ services:
     image: init:ton
     pull_policy: never
     environment:
-      - USE_TON_DUMP=${USE_TON_DUMP:-false}
-      - TON_WORK_DIR=${TON_WORK_DIR:-/var/ton-work}
+      - SNAPSHOT=${SNAPSHOT:-}
       - GLOBAL_CONFIG_URL=${GLOBAL_CONFIG_URL:-https://ton.org/global.config.json}
-      - DUMP_BASE_URL=${DUMP_BASE_URL:-https://dump.ton.org}
-      - DUMP_NAME=${DUMP_NAME:-}
-      - DUMP_THREADS=${DUMP_THREADS:-}
     volumes:
       - ton-work:/var/ton-work
       - /etc/localtime:/etc/localtime:ro
@@ -41,29 +37,30 @@ services:
     stop_grace_period: 5m
     environment:
       - TON_BRANCH=${TON_BRANCH:-latest}
-      - PUBLIC_IP=${PUBLIC_IP}
+      - PUBLIC_IP=${PUBLIC_IP:-}
       - GLOBAL_CONFIG_URL=${GLOBAL_CONFIG_URL}
       - MYTONCTRL_VERSION=${MYTONCTRL_VERSION:-master}
       - TELEMETRY=${TELEMETRY:-true}
       - IGNORE_MINIMAL_REQS=${IGNORE_MINIMAL_REQS:-true}
       - MODE=${MODE:-liteserver}
-      - DUMP=${DUMP:-false}
       - ARCHIVE_TTL=${ARCHIVE_TTL:-2592000}
       - STATE_TTL=${STATE_TTL:-86400}
       - VERBOSITY=${VERBOSITY:-1}
       - LITESERVER_PORT=${LITESERVER_PORT:-}
       - VALIDATOR_PORT=${VALIDATOR_PORT:-}
       - VALIDATOR_CONSOLE_PORT=${VALIDATOR_CONSOLE_PORT:-}
-      - WAIT_FOR_DUMP=${WAIT_FOR_DUMP:-false}
-      - TON_WORK_DIR=${TON_WORK_DIR:-/var/ton-work}
     volumes:
       - ton-work:/var/ton-work
       - mytoncore:/usr/local/bin/mytoncore
       - /etc/localtime:/etc/localtime:ro
     ports:
       - ${VALIDATOR_PORT:-30001}:${VALIDATOR_PORT:-30001}/udp
-      - ${LITESERVER_PORT:-30003}:${LITESERVER_PORT:-30003}/tcp
-      - ${VALIDATOR_CONSOLE_PORT:-30002}:${VALIDATOR_CONSOLE_PORT:-30002}/tcp
+    labels:
+      - traefik.enable=true
+      - traefik.tcp.routers.${TON_HOST:-ton}.service=${TON_HOST:-ton}
+      - traefik.tcp.routers.${TON_HOST:-ton}.entrypoints=tonls
+      - traefik.tcp.routers.${TON_HOST:-ton}.rule=HostSNI(`*`)
+      - traefik.tcp.services.${TON_HOST:-ton}.loadbalancer.server.port=${LITESERVER_PORT:-30003}
     depends_on:
       ton-init:
         condition: service_completed_successfully

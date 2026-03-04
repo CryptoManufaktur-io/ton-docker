@@ -9,3 +9,9 @@ custom.yml
 *.iml
 *.ipr
 *.iws
+.vscode/
+.DS_Store
+*.log
+*.tmp
+tmp/
+temp/

@@ -52,13 +52,13 @@ version() {
   echo
   __var="COMPOSE_FILE"
   __get_value_from_env "${__var}" "${__env_file}" "__value"
-# Client versions
-# Adjust for your clients and how to check their version
-# Multiple clients are in multiple case statements. Mutually exclusive clients are in one case statement
-# Avoid the use of ;;&
+# client versions
   case "${__value}" in
     *ton.yml* )
-      __docompose exec ton mytonctrl --version || true
+      echo "TON_DOCKER_TAG: $(grep -E '^TON_DOCKER_TAG=' "${__env_file}" | cut -d '=' -f2)"
+      echo "TON_DOCKER_REPO: $(grep -E '^TON_DOCKER_REPO=' "${__env_file}" | cut -d '=' -f2)"
+      __docompose exec ton validator-engine -V || true
+      __docompose exec ton bash -c "mytonctrl version" || true
       ;;
   esac
 }
