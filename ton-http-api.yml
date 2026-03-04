@@ -47,7 +47,6 @@ services:
       - TON_API_GUNICORN_FLAGS=${TON_API_GUNICORN_FLAGS:-}
     volumes:
       - ton-api-config:/shared-config:ro
-    # codespell:ignore pyTON
     command: >-
       -c "gunicorn -k uvicorn.workers.UvicornWorker
       -w ${TON_API_WEBSERVERS_WORKERS:-1}
