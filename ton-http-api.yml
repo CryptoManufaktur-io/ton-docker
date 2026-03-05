@@ -58,6 +58,15 @@ services:
       timeout: 10s
       retries: 3
       start_period: 60s
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.${TON_API_HOST:-ton-api}.service=${TON_API_HOST:-ton-api}
+      - traefik.http.routers.${TON_API_HOST:-ton-api}.entrypoints=websecure
+      - traefik.http.routers.${TON_API_HOST:-ton-api}.rule=Host(`${TON_API_HOST:-ton-api}.${DOMAIN}`)
+      - traefik.http.routers.${TON_API_HOST:-ton-api}.tls.certresolver=letsencrypt
+      - traefik.http.services.${TON_API_HOST:-ton-api}.loadbalancer.server.port=8081
+      - traefik.http.services.${TON_API_HOST:-ton-api}.loadbalancer.healthcheck.path=${TON_API_ROOT_PATH:-/}healthcheck
+      - traefik.http.services.${TON_API_HOST:-ton-api}.loadbalancer.healthcheck.interval=30s
     <<: *logging
 
 volumes:
