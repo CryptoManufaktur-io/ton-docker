@@ -21,12 +21,39 @@ if ! docker ps --format '{{.Names}}' | grep -q "^${TON_CONTAINER}$"; then
   exit 1
 fi
 
-echo "[ton-http-api-config] Waiting for liteserver config to be generated..."
+echo "[ton-http-api-config] Waiting for TON services to be ready..."
 
-for i in $(seq 1 ${MAX_RETRIES}); do
-  if docker exec "${TON_CONTAINER}" test -f /usr/bin/ton/local.config.json 2>/dev/null; then
-    echo "[ton-http-api-config] Config found, extracting..."
+# Wait for validator and mytoncore services to start (2-3 minutes)
+for i in $(seq 1 20); do
+  if docker exec "${TON_CONTAINER}" systemctl is-active validator >/dev/null 2>&1 && \
+     docker exec "${TON_CONTAINER}" systemctl is-active mytoncore >/dev/null 2>&1; then
+    echo "[ton-http-api-config] TON services are running"
+    break
+  fi
+  echo "[ton-http-api-config] Waiting for services... (${i}/20)"
+  sleep 10
+done
 
+# Check if config already exists
+if docker exec "${TON_CONTAINER}" test -f /usr/bin/ton/local.config.json 2>/dev/null; then
+  echo "[ton-http-api-config] Config already exists, extracting..."
+else
+  echo "[ton-http-api-config] Generating liteserver config..."
+  # Generate the config - this works even while node is still syncing
+  if docker exec "${TON_CONTAINER}" bash -c "echo 'installer clcf' | mytonctrl" 2>&1 | tee /tmp/clcf.log | grep -i "created"; then
+    echo "[ton-http-api-config] Config generated successfully"
+  else
+    echo "[ton-http-api-config] Config generation output:"
+    cat /tmp/clcf.log || true
+  fi
+  sleep 5  # Give it a moment to write the file
+fi
+
+# Verify and extract config
+echo "[ton-http-api-config] Extracting config file..."
+if docker exec "${TON_CONTAINER}" test -f /usr/bin/ton/local.config.json 2>/dev/null; then
+  # Verify it's valid JSON
+  if docker exec "${TON_CONTAINER}" cat /usr/bin/ton/local.config.json | grep -q "liteservers"; then
     docker cp "${TON_CONTAINER}:/usr/bin/ton/local.config.json" "${CONFIG_DEST}"
     chmod 644 "${CONFIG_DEST}"
 
@@ -34,14 +61,12 @@ for i in $(seq 1 ${MAX_RETRIES}); do
     echo "[ton-http-api-config] Liteserver configuration:"
     cat "${CONFIG_DEST}"
     exit 0
+  else
+    echo "[ton-http-api-config] ERROR: Config file exists but is not valid JSON"
+    exit 1
   fi
-
-  echo "[ton-http-api-config] Waiting for config to be generated... (${i}/${MAX_RETRIES})"
-  sleep 10
-done
-
-echo "[ton-http-api-config] ERROR: Timeout waiting for liteserver config"
-echo "[ton-http-api-config] The config file was not found at /usr/bin/ton/local.config.json"
-echo "[ton-http-api-config] You can manually generate it by running:"
-echo "[ton-http-api-config]   docker exec ${TON_CONTAINER} bash -c 'mytonctrl' then run 'installer clcf'"
-exit 1
+else
+  echo "[ton-http-api-config] ERROR: Config file not found after generation attempt"
+  echo "[ton-http-api-config] Check TON container logs: docker logs ${TON_CONTAINER}"
+  exit 1
+fi
