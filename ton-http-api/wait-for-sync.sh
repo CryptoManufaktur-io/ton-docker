@@ -20,20 +20,37 @@ check_sync() {
     return 1
   fi
 
-  # check if synced
+  # check for explicit sync complete messages first
   if echo "${STATUS_OUTPUT}" | grep -qi "synchronization complete\|in sync"; then
     return 0
   fi
 
-  # check if validator is active (also means synced)
+  # check if Local validator status exists (means node is running as validator)
   if echo "${STATUS_OUTPUT}" | grep -q "Local validator status"; then
+    # Check Masterchain out of sync value
+    if echo "${STATUS_OUTPUT}" | grep -q "Masterchain out of sync"; then
+      OUT_OF_SYNC=$(echo "${STATUS_OUTPUT}" | grep "Masterchain out of sync" | grep -oE '[0-9]+' | head -1)
+      if [ -n "${OUT_OF_SYNC}" ] && [ "${OUT_OF_SYNC}" -le 2 ]; then
+        return 0
+      fi
+    fi
+
+    # Check Shardchain out of sync value
+    if echo "${STATUS_OUTPUT}" | grep -q "Shardchain out of sync"; then
+      SHARD_BLOCKS=$(echo "${STATUS_OUTPUT}" | grep "Shardchain out of sync" | grep -oE '[0-9]+' | head -1)
+      if [ -n "${SHARD_BLOCKS}" ] && [ "${SHARD_BLOCKS}" -le 2 ]; then
+        return 0
+      fi
+    fi
+
+    # If validator is working, consider it synced
     return 0
   fi
 
-  # check if "out of sync" shows 0-2 blocks/seconds (essentially synced)
-  if echo "${STATUS_OUTPUT}" | grep -q "Masterchain out of sync"; then
-    OUT_OF_SYNC=$(echo "${STATUS_OUTPUT}" | grep "Masterchain out of sync" | grep -oE '[0-9]+' | head -1)
-    if [ -n "${OUT_OF_SYNC}" ] && [ "${OUT_OF_SYNC}" -le 2 ]; then
+  # Generic check for initial sync phase
+  if echo "${STATUS_OUTPUT}" | grep -qi "out of sync"; then
+    BLOCKS=$(echo "${STATUS_OUTPUT}" | grep -oE '[0-9]+ blocks' | head -1 | grep -oE '[0-9]+' || echo "999")
+    if [ "${BLOCKS}" = "0" ]; then
       return 0
     fi
   fi
