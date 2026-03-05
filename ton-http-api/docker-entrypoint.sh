@@ -33,6 +33,17 @@ for i in $(seq 1 20); do
   sleep 10
 done
 
+# Wait for mytonctrl to be initialized and usable (up to 5 minutes)
+echo "[ton-http-api-config] Waiting for mytonctrl to be ready..."
+for i in $(seq 1 30); do
+  if docker exec "${TON_CONTAINER}" bash -c "echo 'exit' | timeout 10 mytonctrl" >/dev/null 2>&1; then
+    echo "[ton-http-api-config] mytonctrl is ready"
+    break
+  fi
+  echo "[ton-http-api-config] Waiting for mytonctrl initialization... (${i}/30)"
+  sleep 10
+done
+
 # Check if config already exists
 if docker exec "${TON_CONTAINER}" test -f /usr/bin/ton/local.config.json 2>/dev/null; then
   echo "[ton-http-api-config] Config already exists, extracting..."
