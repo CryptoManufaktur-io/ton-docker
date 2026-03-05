@@ -3,7 +3,6 @@ set -euo pipefail
 
 TON_CONTAINER="${TON_CONTAINER:-ton}"
 CONFIG_DEST="/shared-config/local.config.json"
-MAX_RETRIES=60
 
 echo "[ton-http-api-config] Waiting for TON container '${TON_CONTAINER}' to start..."
 
