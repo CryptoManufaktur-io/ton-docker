@@ -1,0 +1,12 @@
+FROM toncenter/ton-http-api:latest
+
+USER root
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      docker.io \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY wait-for-sync.sh /wait-for-sync.sh
+RUN chmod +x /wait-for-sync.sh
+
+ENTRYPOINT ["/bin/bash", "/wait-for-sync.sh"]

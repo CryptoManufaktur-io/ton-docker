@@ -43,9 +43,6 @@ __free_space=0
 __docker_dir="/var/lib/docker"
 
 
-# Also adjust version() and __prep_conffiles for your chain, look for the word "Adjust" below
-# If you are using an init container, adjust start()
-
 version() {
 # script version
   grep "^This is" README.md
@@ -63,7 +60,6 @@ version() {
 
 
 __prep_conffiles() {
-  # Adjust - this is where sample files would be copied to config files that are meant to be bind-mounted
   return
 }
 
@@ -115,10 +111,8 @@ __env_migrate() {
   if [ "${__debug}" -eq 1 ]; then  # Find any values in default.env that contain dashes
     __error=0
     while IFS= read -r __line; do
-      # Skip blank lines and comments
       [[ -z "${__line}" || "${__line}" =~ ^# ]] && continue
 
-      # Warn on dash-containing variable names
       if [[ "${__line}" =~ ^([A-Za-z0-9_-]+)= ]]; then
         __varname="${BASH_REMATCH[1]}"
         if [[ "${__varname}" = *-* ]]; then
@@ -129,7 +123,7 @@ __env_migrate() {
           continue
         fi
       else
-        continue  # Doesn't match variable assignment format
+        continue 
       fi
     done < "./default.env"
     if [ "${__error}" -gt 0 ]; then
@@ -338,7 +332,6 @@ __update_value_in_env() {
     awk_exe="awk"
   fi
 
-  # Escape backslashes for safety
   escaped_value=$(printf '%s' "${new_value}" | sed 's/\\/\\\\/g')
 
   # Check if the variable already exists in the .env file
