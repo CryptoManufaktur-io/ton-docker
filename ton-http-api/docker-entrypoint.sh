@@ -36,7 +36,7 @@ done
 # Wait for mytonctrl to be initialized and usable (up to 5 minutes)
 echo "[ton-http-api-config] Waiting for mytonctrl to be ready..."
 for i in $(seq 1 30); do
-  if docker exec "${TON_CONTAINER}" bash -c "echo 'exit' | timeout 10 mytonctrl" >/dev/null 2>&1; then
+  if docker exec "${TON_CONTAINER}" bash -c "echo 'exit' | timeout 10 /usr/bin/mytonctrl" >/dev/null 2>&1; then
     echo "[ton-http-api-config] mytonctrl is ready"
     break
   fi
@@ -50,7 +50,7 @@ if docker exec "${TON_CONTAINER}" test -f /usr/bin/ton/local.config.json 2>/dev/
 else
   echo "[ton-http-api-config] Generating liteserver config..."
   # Generate the config - this works even while node is still syncing
-  if docker exec "${TON_CONTAINER}" bash -c "echo 'installer clcf' | mytonctrl" 2>&1 | tee /tmp/clcf.log | grep -i "created"; then
+  if docker exec "${TON_CONTAINER}" bash -c "echo 'installer clcf' | /usr/bin/mytonctrl" 2>&1 | tee /tmp/clcf.log | grep -i "created"; then
     echo "[ton-http-api-config] Config generated successfully"
   else
     echo "[ton-http-api-config] Config generation output:"
