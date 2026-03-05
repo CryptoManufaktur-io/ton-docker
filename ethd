@@ -56,9 +56,7 @@ version() {
   case "${__value}" in
     *ton.yml* )
       echo "TON_DOCKER_TAG: $(grep -E '^TON_DOCKER_TAG=' "${__env_file}" | cut -d '=' -f2)"
-      echo "TON_DOCKER_REPO: $(grep -E '^TON_DOCKER_REPO=' "${__env_file}" | cut -d '=' -f2)"
       __docompose exec ton validator-engine -V || true
-      __docompose exec ton bash -c "mytonctrl version" || true
       ;;
   esac
 }
@@ -1037,6 +1035,11 @@ cmd() {
 }
 
 
+check-sync() {
+  bash scripts/check-sync.sh "$@" || true
+}
+
+
 terminate() {
   # Assume project name and volume are delimited by _ and there is no _ in the volume name. Done to avoid catching project-2 while looking at project
   if [ -z "$(__dodocker volume ls -q -f "name=^$(basename "$(realpath .)" | tr '[:upper:]' '[:lower:]')_[^_]+$")" ]; then
@@ -1136,6 +1139,8 @@ __full_help() {
   echo "    shows logs"
   echo "  cmd <command>"
   echo "    executes an arbitrary Docker Compose command. Use \"cmd help\" to list them"
+  echo "  check-sync"
+  echo "    call the check sync script to check the sync status of the node"
   echo "  terminate"
   echo "    stops the ${__app_name} and destroys all data stores"
   echo "  space"
@@ -1237,7 +1242,7 @@ if ! __docompose --help >/dev/null 2>&1; then
 fi
 
 case "$__command" in
-  help|update|up|start|down|stop|restart|version|logs|cmd|terminate|space)
+  help|update|up|start|down|stop|restart|version|logs|cmd|check-sync|terminate|space)
     $__command "$@";;
   *)
     echo "Unrecognized command $__command"
