@@ -55,7 +55,7 @@ else
     echo "[ton-http-api-config] Config generation output:"
     cat /tmp/clcf.log || true
   fi
-  sleep 5  
+  sleep 5
 fi
 
 # verify and extract config

@@ -123,7 +123,7 @@ __env_migrate() {
           continue
         fi
       else
-        continue 
+        continue
       fi
     done < "./default.env"
     if [ "${__error}" -gt 0 ]; then

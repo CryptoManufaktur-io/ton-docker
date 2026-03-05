@@ -8,7 +8,7 @@ if ! docker ps --format '{{.Names}}' | grep -q '^ton$'; then
   exit 2
 fi
 
-STATUS_OUTPUT=$(docker exec ton bash -c "mytonctrl status 2>/dev/null" || echo "ERROR")
+STATUS_OUTPUT=$(docker exec ton bash -c "echo 'status' | /usr/bin/mytonctrl 2>/dev/null" || echo "ERROR")
 
 if [[ "${STATUS_OUTPUT}" == "ERROR" ]]; then
   echo "ERROR: Could not get status from mytonctrl"
@@ -29,6 +29,14 @@ fi
 if echo "${STATUS_OUTPUT}" | grep -q "Local validator status"; then
   echo "Synced (validator active)"
   exit 0
+fi
+
+if echo "${STATUS_OUTPUT}" | grep -q "Masterchain out of sync"; then
+  OUT_OF_SYNC=$(echo "${STATUS_OUTPUT}" | grep "Masterchain out of sync" | grep -oE '[0-9]+' | head -1)
+  if [ -n "${OUT_OF_SYNC}" ] && [ "${OUT_OF_SYNC}" -le 2 ]; then
+    echo "Synced (${OUT_OF_SYNC} sec out of sync)"
+    exit 0
+  fi
 fi
 
 echo "Status output:"

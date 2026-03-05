@@ -2,8 +2,8 @@
 set -euo pipefail
 
 TON_CONTAINER="${TON_CONTAINER:-ton}"
-CHECK_INTERVAL=60  
-MAX_WAIT=86400     
+CHECK_INTERVAL=60
+MAX_WAIT=86400
 
 echo "[ton-http-api] Waiting for TON node to complete initial sync before starting API..."
 echo "[ton-http-api] This may take several hours if syncing from scratch."
@@ -14,7 +14,7 @@ check_sync() {
     return 1
   fi
 
-  STATUS_OUTPUT=$(docker exec "${TON_CONTAINER}" bash -c "mytonctrl status 2>/dev/null" || echo "ERROR")
+  STATUS_OUTPUT=$(docker exec "${TON_CONTAINER}" bash -c "echo 'status' | /usr/bin/mytonctrl 2>/dev/null" || echo "ERROR")
 
   if [[ "${STATUS_OUTPUT}" == "ERROR" ]]; then
     return 1
@@ -30,6 +30,14 @@ check_sync() {
     return 0
   fi
 
+  # check if "out of sync" shows 0-2 blocks/seconds (essentially synced)
+  if echo "${STATUS_OUTPUT}" | grep -q "Masterchain out of sync"; then
+    OUT_OF_SYNC=$(echo "${STATUS_OUTPUT}" | grep "Masterchain out of sync" | grep -oE '[0-9]+' | head -1)
+    if [ -n "${OUT_OF_SYNC}" ] && [ "${OUT_OF_SYNC}" -le 2 ]; then
+      return 0
+    fi
+  fi
+
   return 1
 }
 
@@ -43,7 +51,7 @@ while [ $ELAPSED -lt $MAX_WAIT ]; do
 
   # get sync status for logging
   if docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^${TON_CONTAINER}$"; then
-    STATUS_OUTPUT=$(docker exec "${TON_CONTAINER}" bash -c "mytonctrl status 2>/dev/null" || echo "")
+    STATUS_OUTPUT=$(docker exec "${TON_CONTAINER}" bash -c "echo 'status' | /usr/bin/mytonctrl 2>/dev/null" || echo "")
 
     if echo "${STATUS_OUTPUT}" | grep -qi "out of sync"; then
       BLOCKS_BEHIND=$(echo "${STATUS_OUTPUT}" | grep -oE '[0-9]+ blocks' | head -1 | grep -oE '[0-9]+' || echo "unknown")
