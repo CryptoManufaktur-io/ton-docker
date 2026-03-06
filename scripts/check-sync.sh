@@ -21,16 +21,18 @@ fi
 
 # check local validator status
 if echo "${STATUS_OUTPUT}" | grep -q "Local validator status"; then
-  if echo "${STATUS_OUTPUT}" | grep -q "last known block was"; then
-    SECONDS_BEHIND=$(echo "${STATUS_OUTPUT}" | grep "last known block was" | grep -oE '[0-9]+ s ago' | grep -oE '[0-9]+' | head -1)
+  # Extract seconds from sync status line (handles both "last known block was X s ago" and "last key block is X, Y s ago")
+  if echo "${STATUS_OUTPUT}" | grep -q "Local validator initial sync status"; then
+    SECONDS_BEHIND=$(echo "${STATUS_OUTPUT}" | grep "Local validator initial sync status" | grep -oE '[0-9]+ s ago' | tail -1 | grep -oE '[0-9]+')
     if [ -n "${SECONDS_BEHIND}" ]; then
       if [ "${SECONDS_BEHIND}" -le 60 ]; then
         echo "Synced (${SECONDS_BEHIND}s behind)"
         exit 0
       else
-        HOURS_BEHIND=$((SECONDS_BEHIND / 3600))
+        DAYS_BEHIND=$((SECONDS_BEHIND / 86400))
+        HOURS_BEHIND=$(((SECONDS_BEHIND % 86400) / 3600))
         MINUTES_BEHIND=$(((SECONDS_BEHIND % 3600) / 60))
-        echo "Syncing: ${SECONDS_BEHIND}s (${HOURS_BEHIND}h ${MINUTES_BEHIND}m) behind"
+        echo "Syncing: ${SECONDS_BEHIND}s (${DAYS_BEHIND}d ${HOURS_BEHIND}h ${MINUTES_BEHIND}m) behind"
         exit 1
       fi
     fi
