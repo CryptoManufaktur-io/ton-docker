@@ -49,6 +49,7 @@ services:
     volumes:
       - ton-api-config:/shared-config:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./scripts:/scripts:ro
     healthcheck:
       test: curl -sS http://127.0.0.1:8081${TON_API_ROOT_PATH:-/}healthcheck || exit 1
       interval: 30s

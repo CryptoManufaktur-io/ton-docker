@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# auto-detect public ip (override via PUBLIC_IP env var)
+# auto-detect public ip
 if [[ -z "${PUBLIC_IP:-}" ]]; then
   echo "[ton] PUBLIC_IP not set, attempting auto-detection..."
-  PUBLIC_IP=$(curl -4 -s --max-time 10 https://ifconfig.me/ip || curl -4 -s --max-time 10 https://icanhazip.com || curl -4 -s --max-time 10 https://ipinfo.io/ip || echo "")
+  PUBLIC_IP=$(curl -4 -s --max-time 10 http://ifconfig.me || curl -4 -s --max-time 10 http://icanhazip.com || curl -4 -s --max-time 10 http://ipinfo.io/ip || echo "")
   if [[ -z "${PUBLIC_IP}" ]]; then
     echo "[ton] ERROR: Could not auto-detect public IP. Please set PUBLIC_IP environment variable manually."
     exit 1

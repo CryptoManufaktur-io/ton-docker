@@ -10,52 +10,15 @@ echo "[ton-http-api] This may take several hours if syncing from scratch."
 echo "[ton-http-api] You can monitor sync progress with: ./ethd check-sync"
 
 check_sync() {
-  if ! docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^${TON_CONTAINER}$"; then
+  SYNC_OUTPUT=$(/scripts/check-sync.sh 2>&1)
+  SYNC_EXIT_CODE=$?
+
+  # exit code 0 = synced, 1 = syncing, 2 = error
+  if [ $SYNC_EXIT_CODE -eq 0 ]; then
+    return 0
+  else
     return 1
   fi
-
-  STATUS_OUTPUT=$(docker exec "${TON_CONTAINER}" bash -c "echo 'status' | /usr/bin/mytonctrl 2>/dev/null" || echo "ERROR")
-
-  if [[ "${STATUS_OUTPUT}" == "ERROR" ]]; then
-    return 1
-  fi
-
-  # check for explicit sync complete messages first
-  if echo "${STATUS_OUTPUT}" | grep -qi "synchronization complete\|in sync"; then
-    return 0
-  fi
-
-  # check if Local validator status exists (means node is running as validator)
-  if echo "${STATUS_OUTPUT}" | grep -q "Local validator status"; then
-    # Check Masterchain out of sync value
-    if echo "${STATUS_OUTPUT}" | grep -q "Masterchain out of sync"; then
-      OUT_OF_SYNC=$(echo "${STATUS_OUTPUT}" | grep "Masterchain out of sync" | grep -oE '[0-9]+' | head -1)
-      if [ -n "${OUT_OF_SYNC}" ] && [ "${OUT_OF_SYNC}" -le 2 ]; then
-        return 0
-      fi
-    fi
-
-    # Check Shardchain out of sync value
-    if echo "${STATUS_OUTPUT}" | grep -q "Shardchain out of sync"; then
-      SHARD_BLOCKS=$(echo "${STATUS_OUTPUT}" | grep "Shardchain out of sync" | grep -oE '[0-9]+' | head -1)
-      if [ -n "${SHARD_BLOCKS}" ] && [ "${SHARD_BLOCKS}" -le 2 ]; then
-        return 0
-      fi
-    fi
-
-    # If validator is working, consider it synced
-    return 0
-  fi
-
-  # Generic check for initial sync phase
-  if echo "${STATUS_OUTPUT}" | grep -qi "out of sync"; then
-    BLOCKS=$(echo "${STATUS_OUTPUT}" | grep -oE '[0-9]+ blocks' | head -1 | grep -oE '[0-9]+' || echo "999")
-    if [ "${BLOCKS}" = "0" ]; then
-      return 0
-    fi
-  fi
-
-  return 1
 }
 
 # wait for sync
@@ -66,18 +29,9 @@ while [ $ELAPSED -lt $MAX_WAIT ]; do
     break
   fi
 
-  # get sync status for logging
   if docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^${TON_CONTAINER}$"; then
-    STATUS_OUTPUT=$(docker exec "${TON_CONTAINER}" bash -c "echo 'status' | /usr/bin/mytonctrl 2>/dev/null" || echo "")
-
-    if echo "${STATUS_OUTPUT}" | grep -qi "out of sync"; then
-      BLOCKS_BEHIND=$(echo "${STATUS_OUTPUT}" | grep -oE '[0-9]+ blocks' | head -1 | grep -oE '[0-9]+' || echo "unknown")
-      echo "[ton-http-api] Still syncing: ${BLOCKS_BEHIND} blocks behind..."
-    elif echo "${STATUS_OUTPUT}" | grep -qi "Initial Node sync is not completed"; then
-      echo "[ton-http-api] Initial sync in progress..."
-    else
-      echo "[ton-http-api] Waiting for sync... (${ELAPSED}s elapsed)"
-    fi
+    SYNC_STATUS=$(/scripts/check-sync.sh 2>&1 || echo "Checking sync status...")
+    echo "[ton-http-api] ${SYNC_STATUS} (${ELAPSED}s elapsed)"
   else
     echo "[ton-http-api] Waiting for TON container to be ready..."
   fi
@@ -93,6 +47,7 @@ fi
 
 # start the actual ton-http-api server
 echo "[ton-http-api] Starting gunicorn server..."
+# shellcheck disable=SC2086  
 exec gunicorn -k uvicorn.workers.UvicornWorker \
   -w "${TON_API_WEBSERVERS_WORKERS:-1}" \
   --bind 0.0.0.0:8081 \

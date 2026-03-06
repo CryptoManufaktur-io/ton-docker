@@ -2,7 +2,6 @@
 set -euo pipefail
 
 # exit codes: 0=synced, 1=syncing, 2=error
-
 if ! docker ps --format '{{.Names}}' | grep -q '^ton$'; then
   echo "ERROR: ton container is not running"
   exit 2
@@ -15,38 +14,56 @@ if [[ "${STATUS_OUTPUT}" == "ERROR" ]]; then
   exit 2
 fi
 
-# Check for explicit sync complete messages first
 if echo "${STATUS_OUTPUT}" | grep -qi "synchronization complete\|in sync"; then
   echo "Synced"
   exit 0
 fi
 
-# Check if Local validator status exists (means node is running as validator)
+# check local validator status 
 if echo "${STATUS_OUTPUT}" | grep -q "Local validator status"; then
-  # Check Masterchain out of sync value
+  if echo "${STATUS_OUTPUT}" | grep -q "last known block was"; then
+    SECONDS_BEHIND=$(echo "${STATUS_OUTPUT}" | grep "last known block was" | grep -oE '[0-9]+ s ago' | grep -oE '[0-9]+' | head -1)
+    if [ -n "${SECONDS_BEHIND}" ]; then
+      if [ "${SECONDS_BEHIND}" -le 60 ]; then
+        echo "Synced (${SECONDS_BEHIND}s behind)"
+        exit 0
+      else
+        HOURS_BEHIND=$((SECONDS_BEHIND / 3600))
+        MINUTES_BEHIND=$(((SECONDS_BEHIND % 3600) / 60))
+        echo "Syncing: ${SECONDS_BEHIND}s (${HOURS_BEHIND}h ${MINUTES_BEHIND}m) behind"
+        exit 1
+      fi
+    fi
+  fi
+
+  # check masterchain out of sync value
   if echo "${STATUS_OUTPUT}" | grep -q "Masterchain out of sync"; then
     OUT_OF_SYNC=$(echo "${STATUS_OUTPUT}" | grep "Masterchain out of sync" | grep -oE '[0-9]+' | head -1)
-    if [ -n "${OUT_OF_SYNC}" ] && [ "${OUT_OF_SYNC}" -le 2 ]; then
-      echo "Synced (${OUT_OF_SYNC} sec out of sync)"
+    if [ -n "${OUT_OF_SYNC}" ] && [ "${OUT_OF_SYNC}" -le 60 ]; then
+      echo "Synced (${OUT_OF_SYNC}s out of sync on masterchain)"
       exit 0
+    else
+      echo "Syncing: ${OUT_OF_SYNC}s out of sync on masterchain"
+      exit 1
     fi
   fi
 
-  # Check Shardchain out of sync value
+  # check shardchain out of sync value
   if echo "${STATUS_OUTPUT}" | grep -q "Shardchain out of sync"; then
     SHARD_BLOCKS=$(echo "${STATUS_OUTPUT}" | grep "Shardchain out of sync" | grep -oE '[0-9]+' | head -1)
-    if [ -n "${SHARD_BLOCKS}" ] && [ "${SHARD_BLOCKS}" -le 2 ]; then
-      echo "Synced (${SHARD_BLOCKS} blocks out of sync)"
+    if [ -n "${SHARD_BLOCKS}" ] && [ "${SHARD_BLOCKS}" -le 10 ]; then
+      echo "Synced (${SHARD_BLOCKS} blocks out of sync on shardchain)"
       exit 0
+    else
+      echo "Syncing: ${SHARD_BLOCKS} blocks out of sync on shardchain"
+      exit 1
     fi
   fi
-
-  # If validator is working but still significantly out of sync
-  echo "Synced (validator active)"
+  echo "Synced"
   exit 0
 fi
 
-# Generic "out of sync" check (only if validator status not found - means initial sync)
+# generic sync check 
 if echo "${STATUS_OUTPUT}" | grep -qi "out of sync"; then
   BLOCKS_BEHIND=$(echo "${STATUS_OUTPUT}" | grep -oE '[0-9]+ blocks' | head -1 | grep -oE '[0-9]+' || echo "unknown")
   if [ "${BLOCKS_BEHIND}" = "0" ]; then
