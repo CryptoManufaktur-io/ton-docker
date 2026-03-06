@@ -19,7 +19,7 @@ if echo "${STATUS_OUTPUT}" | grep -qi "synchronization complete\|in sync"; then
   exit 0
 fi
 
-# check local validator status 
+# check local validator status
 if echo "${STATUS_OUTPUT}" | grep -q "Local validator status"; then
   if echo "${STATUS_OUTPUT}" | grep -q "last known block was"; then
     SECONDS_BEHIND=$(echo "${STATUS_OUTPUT}" | grep "last known block was" | grep -oE '[0-9]+ s ago' | grep -oE '[0-9]+' | head -1)
@@ -63,7 +63,7 @@ if echo "${STATUS_OUTPUT}" | grep -q "Local validator status"; then
   exit 0
 fi
 
-# generic sync check 
+# generic sync check
 if echo "${STATUS_OUTPUT}" | grep -qi "out of sync"; then
   BLOCKS_BEHIND=$(echo "${STATUS_OUTPUT}" | grep -oE '[0-9]+ blocks' | head -1 | grep -oE '[0-9]+' || echo "unknown")
   if [ "${BLOCKS_BEHIND}" = "0" ]; then

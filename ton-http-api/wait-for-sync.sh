@@ -10,15 +10,9 @@ echo "[ton-http-api] This may take several hours if syncing from scratch."
 echo "[ton-http-api] You can monitor sync progress with: ./ethd check-sync"
 
 check_sync() {
-  SYNC_OUTPUT=$(/scripts/check-sync.sh 2>&1)
-  SYNC_EXIT_CODE=$?
-
+  /scripts/check-sync.sh >/dev/null 2>&1
   # exit code 0 = synced, 1 = syncing, 2 = error
-  if [ $SYNC_EXIT_CODE -eq 0 ]; then
-    return 0
-  else
-    return 1
-  fi
+  return $?
 }
 
 # wait for sync
@@ -47,7 +41,7 @@ fi
 
 # start the actual ton-http-api server
 echo "[ton-http-api] Starting gunicorn server..."
-# shellcheck disable=SC2086  
+# shellcheck disable=SC2086
 exec gunicorn -k uvicorn.workers.UvicornWorker \
   -w "${TON_API_WEBSERVERS_WORKERS:-1}" \
   --bind 0.0.0.0:8081 \
