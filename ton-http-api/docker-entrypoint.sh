@@ -1,22 +1,42 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-TON_CONTAINER="${TON_CONTAINER:-ton}"
+DOCKER_SERVICE="${DOCKER_SERVICE:-ton}"
+TON_CONTAINER="${TON_CONTAINER:-}"
 CONFIG_DEST="/shared-config/local.config.json"
 
-echo "[ton-http-api-config] Waiting for TON container '${TON_CONTAINER}' to start..."
+resolve_ton_container() {
+  if [[ -n "$TON_CONTAINER" ]]; then
+    return 0
+  fi
+
+  TON_CONTAINER="$(docker ps --filter "label=com.docker.compose.service=${DOCKER_SERVICE}" --format '{{.Names}}' | head -1)"
+
+  if [[ -z "$TON_CONTAINER" ]]; then
+    if docker compose version >/dev/null 2>&1; then
+      local container_id
+      container_id="$(docker compose ps -q "$DOCKER_SERVICE" 2>/dev/null | head -n 1)"
+      if [[ -n "$container_id" ]]; then
+        TON_CONTAINER="$(docker inspect --format '{{.Name}}' "$container_id" 2>/dev/null | sed 's/^\///')"
+      fi
+    fi
+  fi
+}
+
+echo "[ton-http-api-config] Waiting for TON service '${DOCKER_SERVICE}' to start..."
 
 for i in $(seq 1 30); do
-  if docker ps --format '{{.Names}}' | grep -q "^${TON_CONTAINER}$"; then
-    echo "[ton-http-api-config] TON container is running"
+  resolve_ton_container
+  if [[ -n "$TON_CONTAINER" ]]; then
+    echo "[ton-http-api-config] TON container found: ${TON_CONTAINER}"
     break
   fi
   echo "[ton-http-api-config] Waiting for TON container... (${i}/30)"
   sleep 10
 done
 
-if ! docker ps --format '{{.Names}}' | grep -q "^${TON_CONTAINER}$"; then
-  echo "[ton-http-api-config] ERROR: TON container '${TON_CONTAINER}' is not running"
+if [[ -z "$TON_CONTAINER" ]]; then
+  echo "[ton-http-api-config] ERROR: TON service '${DOCKER_SERVICE}' container is not running"
   exit 1
 fi
 

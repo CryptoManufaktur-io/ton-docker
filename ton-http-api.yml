@@ -17,7 +17,7 @@ services:
       ton:
         condition: service_started
     environment:
-      - TON_CONTAINER=${TON_CONTAINER:-ton}
+      - TON_CONTAINER=${TON_CONTAINER:-}
     volumes:
       - ton-api-config:/shared-config
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -28,7 +28,6 @@ services:
       context: ./ton-http-api
       dockerfile: Dockerfile.api
     image: ton-http-api:local
-    container_name: ton-http-api
     restart: unless-stopped
     ports:
       - ${TON_API_HTTP_PORT:-8081}:8081
@@ -45,7 +44,7 @@ services:
       - TON_API_ROOT_PATH=${TON_API_ROOT_PATH:-/}
       - TON_API_WEBSERVERS_WORKERS=${TON_API_WEBSERVERS_WORKERS:-1}
       - TON_API_GUNICORN_FLAGS=${TON_API_GUNICORN_FLAGS:-}
-      - TON_CONTAINER=${TON_HOST:-ton}
+      - TON_CONTAINER=${TON_CONTAINER:-}
     volumes:
       - ton-api-config:/shared-config:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro

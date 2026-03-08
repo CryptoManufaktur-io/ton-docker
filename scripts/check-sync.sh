@@ -1,13 +1,28 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# exit codes: 0=synced, 1=syncing, 2=error
-if ! docker ps --format '{{.Names}}' | grep -q '^ton$'; then
-  echo "ERROR: ton container is not running"
+DOCKER_SERVICE="${DOCKER_SERVICE:-ton}"
+CONTAINER="${CONTAINER:-}"
+
+if [[ -z "$CONTAINER" ]]; then
+  if docker compose version >/dev/null 2>&1; then
+    CONTAINER="$(docker compose ps -q "$DOCKER_SERVICE" 2>/dev/null | head -n 1)"
+    if [[ -n "$CONTAINER" ]]; then
+      CONTAINER="$(docker inspect --format '{{.Name}}' "$CONTAINER" 2>/dev/null | sed 's/^\///')"
+    fi
+  fi
+
+  if [[ -z "$CONTAINER" ]]; then
+    CONTAINER="$(docker ps --filter "label=com.docker.compose.service=${DOCKER_SERVICE}" --format '{{.Names}}' | head -1)"
+  fi
+fi
+
+if [[ -z "$CONTAINER" ]]; then
+  echo "ERROR: ${DOCKER_SERVICE} service container is not running"
   exit 2
 fi
 
-STATUS_OUTPUT=$(docker exec ton bash -c "echo 'status' | /usr/bin/mytonctrl 2>/dev/null" || echo "ERROR")
+STATUS_OUTPUT=$(docker exec "$CONTAINER" bash -c "echo 'status' | /usr/bin/mytonctrl 2>/dev/null" || echo "ERROR")
 
 if [[ "${STATUS_OUTPUT}" == "ERROR" ]]; then
   echo "ERROR: Could not get status from mytonctrl"
@@ -21,7 +36,6 @@ fi
 
 # check local validator status
 if echo "${STATUS_OUTPUT}" | grep -q "Local validator status"; then
-  # Extract seconds from sync status line (handles both "last known block was X s ago" and "last key block is X, Y s ago")
   if echo "${STATUS_OUTPUT}" | grep -q "Local validator initial sync status"; then
     SECONDS_BEHIND=$(echo "${STATUS_OUTPUT}" | grep "Local validator initial sync status" | grep -oE '[0-9]+ s ago' | tail -1 | grep -oE '[0-9]+')
     if [ -n "${SECONDS_BEHIND}" ]; then

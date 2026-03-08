@@ -32,7 +32,6 @@ services:
         - DOCKER_TAG=${TON_DOCKER_TAG}
         - DOCKER_REPO=${TON_DOCKER_REPO}
     image: ton:${TON_BRANCH:-latest}
-    container_name: ton
     pull_policy: never
     stop_grace_period: 5m
     environment:
