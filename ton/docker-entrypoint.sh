@@ -37,7 +37,7 @@ if [[ -d "/ton-config-export" ]]; then
 
     echo "[ton] Waiting for mytonctrl to be ready..."
 
-    for i in {1..60}; do
+    for _ in {1..60}; do
       if bash -c "echo 'exit' | timeout 10 /usr/bin/mytonctrl" >/dev/null 2>&1; then
         echo "[ton] mytonctrl is ready"
         break
@@ -58,7 +58,7 @@ if [[ -d "/ton-config-export" ]]; then
       echo "[ton] Config already exists"
     fi
 
-    for i in {1..360}; do
+    for _ in {1..360}; do
       if [[ -f "${SOURCE_CONFIG}" ]] && jq empty "${SOURCE_CONFIG}" 2>/dev/null; then
         cp "${SOURCE_CONFIG}" "${EXPORT_CONFIG}"
         chmod 644 "${EXPORT_CONFIG}"
