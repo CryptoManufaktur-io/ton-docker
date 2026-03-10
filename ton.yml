@@ -60,6 +60,10 @@ services:
       - traefik.tcp.routers.${TON_HOST:-ton}.entrypoints=tonls
       - traefik.tcp.routers.${TON_HOST:-ton}.rule=HostSNI(`*`)
       - traefik.tcp.services.${TON_HOST:-ton}.loadbalancer.server.port=${LITESERVER_PORT:-30003}
+      - traefik.tcp.routers.${TON_HOST:-ton}-console.service=${TON_HOST:-ton}-console
+      - traefik.tcp.routers.${TON_HOST:-ton}-console.entrypoints=tonvc
+      - traefik.tcp.routers.${TON_HOST:-ton}-console.rule=HostSNI(`*`)
+      - traefik.tcp.services.${TON_HOST:-ton}-console.loadbalancer.server.port=${VALIDATOR_CONSOLE_PORT:-30002}
     depends_on:
       ton-init:
         condition: service_completed_successfully

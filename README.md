@@ -2,11 +2,9 @@
 
 Docker Compose for TON (The Open Network) liteserver nodes.
 
-`cp default.env .env`, adjust values for the right network (mainnet/testnet), then `./ethd up`.
+`cp default.env .env`, then `nano .env` and adjust values for the right network (mainnet/testnet), particularly `GLOBAL_CONFIG_URL` and `SNAPSHOT`.
 
 Meant to be used with [central-proxy-docker](https://github.com/CryptoManufaktur-io/central-proxy-docker) for traefik and Prometheus remote write; use `:ext-network.yml` in `COMPOSE_FILE` inside `.env` in that case.
-
-Add `ton-shared.yml` to `COMPOSE_FILE` to expose liteserver and validator console ports locally instead of via traefik.
 
 `./ethd install` brings in docker-ce, if you don't have Docker installed already.
 
@@ -16,9 +14,9 @@ Add `ton-shared.yml` to `COMPOSE_FILE` to expose liteserver and validator consol
 
 `./ethd up`
 
-Initial sync: ~10 hours (~4-5 hours with snapshot).
-
 To update the software, run `./ethd update` and then `./ethd up`
+
+Initial sync: ~10 hours (~4-5 hours with snapshot).
 
 # Configuration
 
@@ -31,9 +29,14 @@ GLOBAL_CONFIG_URL=https://ton.org/global.config.json
 SNAPSHOT=latest
 ```
 
-With HTTP API:
+With HTTP API (Traefik):
 ```properties
 COMPOSE_FILE=ton.yml:ton-http-api.yml
+```
+
+With HTTP API (direct port):
+```properties
+COMPOSE_FILE=ton.yml:ton-http-api.yml:ton-http-api-shared.yml
 TON_API_HTTP_PORT=8081
 ```
 
@@ -51,12 +54,6 @@ SNAPSHOT=latest_testnet
 ```
 
 ## HTTP API
-
-Enable HTTP/JSON-RPC API in `COMPOSE_FILE`:
-```properties
-COMPOSE_FILE=ton.yml:ton-http-api.yml
-TON_API_HTTP_PORT=8081
-```
 
 Test endpoints:
 ```bash
@@ -88,14 +85,6 @@ docker compose exec ton mytonctrl
 MyTonCtrl> status
 ```
 
-## Generate Liteserver Config
-After full sync:
-```bash
-docker compose exec ton mytonctrl
-MyTonCtrl> installer clcf
-```
-Creates `/usr/bin/ton/local.config.json` for client connections.
-
 # Hardware Requirements
 
 **Mainnet:**
@@ -111,15 +100,14 @@ Default ports (customizable in `.env`):
 - `VALIDATOR_PORT` (30001/udp) - P2P networking
 - `LITESERVER_PORT` (30003/tcp) - Liteserver connections
 - `VALIDATOR_CONSOLE_PORT` (30002/tcp) - Console access
-- `TON_API_HTTP_PORT` (8081/tcp) - HTTP API
 
 Public IP auto-detected on startup. Override with `PUBLIC_IP` in `.env` if needed.
 
 # Customization
 
-`custom.yml` can override any settings and is not tracked by git. Add to `COMPOSE_FILE` in `.env` if used.
+Use `custom.yml` to override any settings (not tracked by git). Add to `COMPOSE_FILE` in `.env`.
 
-See `default.env` for all configuration options.
+See `default.env` for all options.
 
 ## Version
 

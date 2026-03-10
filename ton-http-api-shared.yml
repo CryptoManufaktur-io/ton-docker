@@ -1,0 +1,6 @@
+# exposes ton-http-api port locally instead of via traefik
+# add to COMPOSE_FILE: ton-http-api.yml:ton-http-api-shared.yml
+services:
+  ton-http-api:
+    ports:
+      - ${TON_API_HTTP_PORT:-8081}:8081

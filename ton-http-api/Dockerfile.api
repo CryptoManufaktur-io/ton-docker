@@ -3,11 +3,10 @@ FROM toncenter/ton-http-api:latest
 USER root
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      docker.io \
       curl \
     && rm -rf /var/lib/apt/lists/*
 
-COPY wait-for-sync.sh /wait-for-sync.sh
-RUN chmod +x /wait-for-sync.sh
+COPY start-api.sh /start-api.sh
+RUN chmod +x /start-api.sh
 
-ENTRYPOINT ["/bin/bash", "/wait-for-sync.sh"]
+ENTRYPOINT ["/bin/bash", "/start-api.sh"]

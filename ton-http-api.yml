@@ -7,6 +7,10 @@ x-logging: &logging
       tag: '{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}'
 
 services:
+  ton:
+    volumes:
+      - ton-source-config:/ton-config-export
+
   ton-http-api-config:
     build:
       context: ./ton-http-api
@@ -16,11 +20,9 @@ services:
     depends_on:
       ton:
         condition: service_started
-    environment:
-      - TON_CONTAINER=${TON_CONTAINER:-}
     volumes:
+      - ton-source-config:/ton-source-config:ro
       - ton-api-config:/shared-config
-      - /var/run/docker.sock:/var/run/docker.sock:ro
     <<: *logging
 
   ton-http-api:
@@ -29,8 +31,6 @@ services:
       dockerfile: Dockerfile.api
     image: ton-http-api:local
     restart: unless-stopped
-    ports:
-      - ${TON_API_HTTP_PORT:-8081}:8081
     environment:
       - TON_API_CACHE_ENABLED=${TON_API_CACHE_ENABLED:-0}
       - TON_API_LOGS_JSONIFY=${TON_API_LOGS_JSONIFY:-0}
@@ -44,11 +44,8 @@ services:
       - TON_API_ROOT_PATH=${TON_API_ROOT_PATH:-/}
       - TON_API_WEBSERVERS_WORKERS=${TON_API_WEBSERVERS_WORKERS:-1}
       - TON_API_GUNICORN_FLAGS=${TON_API_GUNICORN_FLAGS:-}
-      - TON_CONTAINER=${TON_CONTAINER:-}
     volumes:
       - ton-api-config:/shared-config:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./scripts:/scripts:ro
     healthcheck:
       test: curl -sS http://127.0.0.1:8081${TON_API_ROOT_PATH:-/}healthcheck || exit 1
       interval: 30s
@@ -70,4 +67,5 @@ services:
     <<: *logging
 
 volumes:
+  ton-source-config:
   ton-api-config:
