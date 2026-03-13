@@ -1,0 +1,71 @@
+x-logging: &logging
+  logging:
+    driver: json-file
+    options:
+      max-size: 100m
+      max-file: "3"
+      tag: '{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}'
+
+services:
+  ton:
+    volumes:
+      - ton-source-config:/ton-config-export
+
+  ton-http-api-config:
+    build:
+      context: ./ton-http-api
+      dockerfile: Dockerfile
+    image: ton-http-api-config:local
+    restart: "no"
+    depends_on:
+      ton:
+        condition: service_started
+    volumes:
+      - ton-source-config:/ton-source-config:ro
+      - ton-api-config:/shared-config
+    <<: *logging
+
+  ton-http-api:
+    build:
+      context: ./ton-http-api
+      dockerfile: Dockerfile.api
+    image: ton-http-api:local
+    restart: unless-stopped
+    environment:
+      - TON_API_CACHE_ENABLED=${TON_API_CACHE_ENABLED:-0}
+      - TON_API_LOGS_JSONIFY=${TON_API_LOGS_JSONIFY:-0}
+      - TON_API_LOGS_LEVEL=${TON_API_LOGS_LEVEL:-INFO}
+      - TON_API_TONLIB_LITESERVER_CONFIG=/shared-config/local.config.json
+      - TON_API_TONLIB_KEYSTORE=/tmp/ton_keystore/
+      - TON_API_TONLIB_PARALLEL_REQUESTS_PER_LITESERVER=${TON_API_TONLIB_PARALLEL_REQUESTS_PER_LITESERVER:-50}
+      - TON_API_TONLIB_REQUEST_TIMEOUT=${TON_API_TONLIB_REQUEST_TIMEOUT:-10}
+      - TON_API_GET_METHODS_ENABLED=${TON_API_GET_METHODS_ENABLED:-1}
+      - TON_API_JSON_RPC_ENABLED=${TON_API_JSON_RPC_ENABLED:-1}
+      - TON_API_ROOT_PATH=${TON_API_ROOT_PATH:-/}
+      - TON_API_WEBSERVERS_WORKERS=${TON_API_WEBSERVERS_WORKERS:-1}
+      - TON_API_GUNICORN_FLAGS=${TON_API_GUNICORN_FLAGS:-}
+    volumes:
+      - ton-api-config:/shared-config:ro
+    healthcheck:
+      test: curl -sS http://127.0.0.1:8081${TON_API_ROOT_PATH:-/}healthcheck || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 24h
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.${TON_API_HOST:-ton-api}.service=${TON_API_HOST:-ton-api}
+      - traefik.http.routers.${TON_API_HOST:-ton-api}.entrypoints=websecure
+      - traefik.http.routers.${TON_API_HOST:-ton-api}.rule=Host(`${TON_API_HOST:-ton-api}.${DOMAIN}`)
+      - traefik.http.routers.${TON_API_HOST:-ton-api}.tls.certresolver=letsencrypt
+      - traefik.http.services.${TON_API_HOST:-ton-api}.loadbalancer.server.port=8081
+      - traefik.http.services.${TON_API_HOST:-ton-api}.loadbalancer.healthcheck.path=${TON_API_ROOT_PATH:-/}healthcheck
+      - traefik.http.services.${TON_API_HOST:-ton-api}.loadbalancer.healthcheck.interval=30s
+    depends_on:
+      ton-http-api-config:
+        condition: service_completed_successfully
+    <<: *logging
+
+volumes:
+  ton-source-config:
+  ton-api-config:

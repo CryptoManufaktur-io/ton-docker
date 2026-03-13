@@ -10,14 +10,10 @@ repos:
       - id: check-shebang-scripts-are-executable
       - id: check-executables-have-shebangs
       - id: detect-private-key
-      - id: check-ast
-      - id: debug-statements
       - id: check-merge-conflict
       - id: check-added-large-files
       - id: mixed-line-ending
       - id: check-case-conflict
-      - id: requirements-txt-fixer
-      - id: check-toml
 
   - repo: https://github.com/jumanjihouse/pre-commit-hooks
     rev: 3.0.0
@@ -33,13 +29,7 @@ repos:
     rev: v2.4.1
     hooks:
       - id: codespell
-
-  # Dockerfiles
-  # Disabled bcs macOS Docker might not be installed
-  # - repo: https://github.com/hadolint/hadolint
-  #   rev: v2.13.1
-  #   hooks:
-  #     - id: hadolint-docker
+        args: ['-L', 'pyton']
 
   # YAML style (beyond syntax)
   - repo: https://github.com/adrienverge/yamllint

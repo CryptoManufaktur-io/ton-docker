@@ -1,0 +1,12 @@
+FROM toncenter/ton-http-api:latest
+
+USER root
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY start-api.sh /start-api.sh
+RUN chmod +x /start-api.sh
+
+ENTRYPOINT ["/bin/bash", "/start-api.sh"]
