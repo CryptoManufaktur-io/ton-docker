@@ -16,6 +16,7 @@ services:
       context: ./ton-http-api
       dockerfile: Dockerfile
     image: ton-http-api-config:local
+    pull_policy: never
     restart: "no"
     depends_on:
       ton:
@@ -30,6 +31,7 @@ services:
       context: ./ton-http-api
       dockerfile: Dockerfile.api
     image: ton-http-api:local
+    pull_policy: never
     restart: unless-stopped
     environment:
       - TON_API_CACHE_ENABLED=${TON_API_CACHE_ENABLED:-0}
