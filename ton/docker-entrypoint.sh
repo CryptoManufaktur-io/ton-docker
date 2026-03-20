@@ -21,11 +21,12 @@ export VALIDATOR_PORT="${VALIDATOR_PORT:-}"
 export LITESERVER_PORT="${LITESERVER_PORT:-}"
 export VALIDATOR_CONSOLE_PORT="${VALIDATOR_CONSOLE_PORT:-}"
 
+# handle container recreation: if mtc_done exists but mytonctrl is not installed force reinstall
 if [[ -f "${TON_WORK_DIR}/db/mtc_done" ]]; then
-  if [[ ! -f /etc/systemd/system/validator.service || ! -f /etc/systemd/system/mytoncore.service ]]; then
-    echo "[ton] mtc_done exists but systemd unit files are missing; forcing reinstall"
+  if ! command -v mytonctrl >/dev/null 2>&1; then
+    echo "[ton] Container was recreated - mytonctrl missing but mtc_done exists"
+    echo "[ton] Removing marker to trigger reinstallation"
     rm -f "${TON_WORK_DIR}/db/mtc_done"
-    rm -rf /usr/src/mytonctrl || true
   fi
 fi
 
