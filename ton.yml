@@ -51,6 +51,7 @@ services:
     volumes:
       - ton-work:/var/ton-work
       - mytoncore:/usr/local/bin/mytoncore
+      - ton-systemd:/etc/systemd/system
       - /etc/localtime:/etc/localtime:ro
     ports:
       - ${VALIDATOR_PORT:-30001}:${VALIDATOR_PORT:-30001}/udp
@@ -72,3 +73,4 @@ services:
 volumes:
   ton-work:
   mytoncore:
+  ton-systemd:
