@@ -24,10 +24,16 @@ Initial sync: ~10 hours (~4-5 hours with snapshot).
 
 Basic setup:
 ```properties
-TON_BRANCH=mainnet
+TON_BRANCH=latest
 GLOBAL_CONFIG_URL=https://ton.org/global.config.json
 SNAPSHOT=latest
 ```
+
+> **Note:** `TON_BRANCH=latest` is the value for mainnet. The upstream
+> `ghcr.io/ton-blockchain/ton-docker-ctrl` entrypoint maps `latest` to
+> `git checkout master` and installs mytonctrl with mainnet config. Any
+> other value (including `mainnet`) is treated as a literal git branch
+> name and installs mytonctrl with `-n testnet`.
 
 With HTTP API (Traefik):
 ```properties
@@ -52,6 +58,8 @@ TON_BRANCH=testnet
 GLOBAL_CONFIG_URL=https://ton.org/testnet-global.config.json
 SNAPSHOT=latest_testnet
 ```
+
+(`testnet` is a real branch in the upstream `ton-blockchain/ton` repo, so this value works as expected.)
 
 ## HTTP API
 
