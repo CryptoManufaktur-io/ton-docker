@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-__project_name="X Docker"
-__app_name="X node"
-__sample_service="X-geth"
+__project_name="Ton Docker"
+__app_name="ton node"
+__sample_service="ton-node"
 __docker_exe="docker"
 __old_docker=0
 __docker_sudo=""
@@ -43,51 +43,87 @@ __free_space=0
 __docker_dir="/var/lib/docker"
 
 
+# Also adjust version() and __prep_conffiles for your chain, look for the word "Adjust" below
+# If you are using an init container, adjust start()
+
 version() {
 # script version
   grep "^This is" README.md
   echo
   __var="COMPOSE_FILE"
   __get_value_from_env "${__var}" "${__env_file}" "__value"
-# client versions
+# Client versions
+# Adjust for your clients and how to check their version
+# Multiple clients are in multiple case statements. Mutually exclusive clients are in one case statement
+# Avoid the use of ;;&
   case "${__value}" in
     *ton.yml* )
-      echo "TON_DOCKER_TAG: $(grep -E '^TON_DOCKER_TAG=' "${__env_file}" | cut -d '=' -f2)"
-      __docompose exec ton validator-engine -V || true
+      __docompose exec ton-node /bin/bash -lc 'echo "status" | mytonctrl'
       ;;
   esac
 }
 
+do-upgrade() {
+  __docompose exec ton-node /bin/bash -lc 'echo "update master" | mytonctrl'
+  __docompose exec ton-node /bin/bash -lc 'echo "upgrade master" | mytonctrl'
+}
+
+check-sync() {
+  __docompose exec ton-node /bin/bash -lc 'echo "status" | mytonctrl'
+}
+
+status(){
+  __docompose exec ton-node /bin/bash -lc 'echo "status" | mytonctrl'
+}
+
+get-liteserver-url(){
+  LITESERVER_KEY=$(
+    docker compose exec -T ton-node sh -c '
+    if [ ! -f /usr/bin/ton/local.config.json ]; then
+        echo "installer clcf" | mytonctrl
+    fi
+
+    jq -r ".liteservers[0].id.key" /usr/bin/ton/local.config.json
+    '
+  )
+
+  __public_ip="--nat=extip:$(wget -qO- https://ifconfig.me/ip)"
+
+  __var="LITESERVER_PORT"
+  __get_value_from_env "${__var}" "${__env_file}" "__port"
+
+  echo "liteserver://${LITESERVER_KEY}@${__public_ip}:${__port}"
+}
 
 __prep_conffiles() {
+  # Adjust - this is where sample files would be copied to config files that are meant to be bind-mounted
   return
 }
 
-
 start() {
- if ! type -P screen >/dev/null 2>&1; then
-   ${__auto_sudo} apt-get update && ${__auto_sudo} apt-get install -y screen
- fi
-__var="TON_BRANCH"
-__get_value_from_env "${__var}" "${__env_file}" "__screen_id"
+  if ! type -P screen >/dev/null 2>&1; then
+    ${__auto_sudo} apt-get update && ${__auto_sudo} apt-get install -y screen
+  fi
+  __var="NETWORK"
+  __get_value_from_env "${__var}" "${__env_file}" "__screen_id"
 # shellcheck disable=SC2154
- rm -f "/tmp/${__screen_id}-compose-screen.log"
+  rm -f "/tmp/${__screen_id}-compose-screen.log"
 
 # shellcheck disable=SC2086
- screen -dmS "${__screen_id}-compose-session" -L -Logfile "/tmp/${__screen_id}-compose-screen.log" ${__compose_exe} up -d --remove-orphans "$@"
- echo "Running \"docker compose up -d\" in screen because of the init container."
- echo
- echo "If this is your first start and you are getting a SNAPSHOT, you can view the init logs:"
- echo "\"${__me} logs -f init\""
- echo
- echo "You can attach to the screen session with \"screen -r ${__screen_id}-compose-session\""
- echo
- echo "Waiting 5 seconds"
- sleep 5
- echo
- echo "Here's the output of docker compose so far:"
- cat "/tmp/${__screen_id}-compose-screen.log"
- echo
+  screen -dmS "${__screen_id}-compose-session" -L -Logfile "/tmp/${__screen_id}-compose-screen.log" ${__compose_exe} up -d --remove-orphans "$@"
+  echo "Running \"docker compose up -d\" in screen because of the init container."
+  echo
+  echo "If this is your first start and you are getting a SNAPSHOT, you can view the init logs:"
+  echo "\"${__me} logs -f op-geth-init\""
+  echo
+  echo "You can attach to the screen session with \"screen -r ${__screen_id}-compose-session\""
+  echo
+  echo "Waiting 5 seconds"
+  sleep 5
+  echo
+  echo "Here's the output of docker compose so far:"
+  cat "/tmp/${__screen_id}-compose-screen.log"
+  echo
 }
 
 
@@ -106,8 +142,10 @@ __env_migrate() {
   if [ "${__debug}" -eq 1 ]; then  # Find any values in default.env that contain dashes
     __error=0
     while IFS= read -r __line; do
+      # Skip blank lines and comments
       [[ -z "${__line}" || "${__line}" =~ ^# ]] && continue
 
+      # Warn on dash-containing variable names
       if [[ "${__line}" =~ ^([A-Za-z0-9_-]+)= ]]; then
         __varname="${BASH_REMATCH[1]}"
         if [[ "${__varname}" = *-* ]]; then
@@ -118,7 +156,7 @@ __env_migrate() {
           continue
         fi
       else
-        continue
+        continue  # Doesn't match variable assignment format
       fi
     done < "./default.env"
     if [ "${__error}" -gt 0 ]; then
@@ -327,6 +365,7 @@ __update_value_in_env() {
     awk_exe="awk"
   fi
 
+  # Escape backslashes for safety
   escaped_value=$(printf '%s' "${new_value}" | sed 's/\\/\\\\/g')
 
   # Check if the variable already exists in the .env file
@@ -1023,11 +1062,6 @@ cmd() {
 }
 
 
-check-sync() {
-  bash scripts/check-sync.sh "$@" || true
-}
-
-
 terminate() {
   # Assume project name and volume are delimited by _ and there is no _ in the volume name. Done to avoid catching project-2 while looking at project
   if [ -z "$(__dodocker volume ls -q -f "name=^$(basename "$(realpath .)" | tr '[:upper:]' '[:lower:]')_[^_]+$")" ]; then
@@ -1121,18 +1155,22 @@ __full_help() {
   echo "    stops the ${__app_name}, or a specific service by name"
   echo "  restart [service-name]"
   echo "    restarts the ${__app_name}, or a specific service by name, a combination of down and up"
-  echo "  version"
-  echo "    prints the version(s) of currently running client(s)"
+  echo "  version|status"
+  echo "    prints the version(s) of currently running client(s) and shows sync status"
   echo "  logs"
   echo "    shows logs"
   echo "  cmd <command>"
   echo "    executes an arbitrary Docker Compose command. Use \"cmd help\" to list them"
-  echo "  check-sync"
-  echo "    call the check sync script to check the sync status of the node"
   echo "  terminate"
   echo "    stops the ${__app_name} and destroys all data stores"
   echo "  space"
   echo "    show Docker volume space usage"
+  echo "  check-sync"
+  echo "    Check sync for the node"
+  echo "  do-upgrade"
+  echo "    Upgrade ton node"
+  echo "  get-liteserver-url"
+  echo "    Gets the full lightserver URL"
   echo "  help"
   echo "    print this help screen"
   echo
@@ -1230,7 +1268,7 @@ if ! __docompose --help >/dev/null 2>&1; then
 fi
 
 case "$__command" in
-  help|update|up|start|down|stop|restart|version|logs|cmd|check-sync|terminate|space)
+  help|update|up|start|down|stop|restart|version|logs|cmd|terminate|space|check-sync|do-upgrade|status|get-liteserver-url)
     $__command "$@";;
   *)
     echo "Unrecognized command $__command"

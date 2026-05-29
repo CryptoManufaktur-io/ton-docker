@@ -1,122 +1,35 @@
 # Overview
 
-Docker Compose for TON (The Open Network) liteserver nodes.
+Docker Compose for ton
 
-`cp default.env .env`, then `nano .env` and adjust values for the right network (mainnet/testnet), particularly `GLOBAL_CONFIG_URL` and `SNAPSHOT`.
+Meant to be used with [central-proxy-docker](https://github.com/CryptoManufaktur-io/central-proxy-docker) for traefik
+and Prometheus remote write; use `:ext-network.yml` in `COMPOSE_FILE` inside `.env` in that case.
 
-Meant to be used with [central-proxy-docker](https://github.com/CryptoManufaktur-io/central-proxy-docker) for traefik and Prometheus remote write; use `:ext-network.yml` in `COMPOSE_FILE` inside `.env` in that case.
+If you want the RPC ports exposed locally, use `rpc-shared.yml` in `COMPOSE_FILE` inside `.env`.
 
-`./ethd install` brings in docker-ce, if you don't have Docker installed already.
+## Quick Start
+
+The `./tond` script can be used as a quick-start:
+
+`./tond install` brings in docker-ce, if you don't have Docker installed already.
 
 `cp default.env .env`
 
-`nano .env` and adjust variables, particularly `GLOBAL_CONFIG_URL` and `SNAPSHOT`
+`nano .env` and adjust variables as needed, particularly mention-important-vars-here
 
-`./ethd up`
+`./tond up`
 
-To update the software, run `./ethd update` and then `./ethd up`
+## Software update
 
-Initial sync: ~10 hours (~4-5 hours with snapshot).
+To update the software, run `./tond update` and then `./tond up`
 
-# Configuration
+## Customization
 
-## Mainnet
-
-Basic setup:
-```properties
-TON_BRANCH=latest
-GLOBAL_CONFIG_URL=https://ton.org/global.config.json
-SNAPSHOT=latest
-```
-
-> **Note:** `TON_BRANCH=latest` is the value for mainnet. The upstream
-> `ghcr.io/ton-blockchain/ton-docker-ctrl` entrypoint maps `latest` to
-> `git checkout master` and installs mytonctrl with mainnet config. Any
-> other value (including `mainnet`) is treated as a literal git branch
-> name and installs mytonctrl with `-n testnet`.
-
-With HTTP API (Traefik):
-```properties
-COMPOSE_FILE=ton.yml:ton-http-api.yml
-```
-
-With HTTP API (direct port):
-```properties
-COMPOSE_FILE=ton.yml:ton-http-api.yml:ton-http-api-shared.yml
-TON_API_HTTP_PORT=8081
-```
-
-With local RPC access:
-```properties
-COMPOSE_FILE=ton.yml:ton-shared.yml
-```
-
-## Testnet
-
-```properties
-TON_BRANCH=testnet
-GLOBAL_CONFIG_URL=https://ton.org/testnet-global.config.json
-SNAPSHOT=latest_testnet
-```
-
-(`testnet` is a real branch in the upstream `ton-blockchain/ton` repo, so this value works as expected.)
-
-## HTTP API
-
-Test endpoints:
-```bash
-# masterchain info
-curl -H 'Content-Type: application/json' \
-  -d '{"jsonrpc":"2.0","id":1,"method":"getMasterchainInfo","params":[]}' \
-  http://localhost:8081
-
-# health check
-curl http://localhost:8081/healthcheck
-```
-
-# Operations
-
-## Check Sync Status
-```bash
-./scripts/check-sync.sh
-```
-Exit codes: 0=synced, 1=syncing, 2=error
-
-## Monitor Logs
-```bash
-./ethd logs -f ton
-```
-
-## Node Status
-```bash
-docker compose exec ton mytonctrl
-MyTonCtrl> status
-```
-
-# Hardware Requirements
-
-**Mainnet:**
-- 16 cores, 64GB RAM
-- 1TB SSD/NVMe (~250GB used, grows over time)
-- 1 Gbps, 10TB+ monthly traffic
-
-**Testnet:** Similar, ~100GB storage
-
-# Ports
-
-Default ports (customizable in `.env`):
-- `VALIDATOR_PORT` (30001/udp) - P2P networking
-- `LITESERVER_PORT` (30003/tcp) - Liteserver connections
-- `VALIDATOR_CONSOLE_PORT` (30002/tcp) - Console access
-
-Public IP auto-detected on startup. Override with `PUBLIC_IP` in `.env` if needed.
-
-# Customization
-
-Use `custom.yml` to override any settings (not tracked by git). Add to `COMPOSE_FILE` in `.env`.
-
-See `default.env` for all options.
+`custom.yml` is not tracked by git and can be used to override anything in the provided yml files. If you use it,
+add it to `COMPOSE_FILE` in `.env`
 
 ## Version
 
-This is TON Docker v1.0.0
+ton Docker uses a semver scheme.
+
+This is ton Docker v1.0.0
