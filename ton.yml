@@ -9,7 +9,7 @@ x-logging: &logging
 services:
   ton:
     build:
-      context: ./ton
+      context: ./
       dockerfile: Dockerfile
     image: ton:fixed
     pull_policy: never

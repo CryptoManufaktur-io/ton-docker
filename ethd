@@ -87,11 +87,14 @@ get-liteserver-url(){
     '
   )
 
-  __public_ip="--nat=extip:$(wget -qO- https://ifconfig.me/ip)"
+  __public_ip="$(wget -4 -qO- https://ifconfig.me/ip)"
 
   __var="LITESERVER_PORT"
   __get_value_from_env "${__var}" "${__env_file}" "__port"
 
+  echo
+  echo
+  echo
   echo "liteserver://${LITESERVER_KEY}@${__public_ip}:${__port}"
 }
 
