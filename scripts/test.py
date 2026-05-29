@@ -18,7 +18,7 @@ def int_to_ip(ip_int):
 async def main():
     # Connect directly to your custom liteserver
     client = LiteClient(
-        host=int_to_ip(server_ip),
+        host=server_ip,
         port=server_port,
         server_pub_key=server_pubkey,
         timeout=15,
