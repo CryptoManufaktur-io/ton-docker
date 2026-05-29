@@ -14,9 +14,6 @@ services:
     image: ton:fixed
     pull_policy: never
     restart: unless-stopped
-    ports:
-      - ${VALIDATOR_PORT}:${VALIDATOR_PORT}/udp
-      - ${LITESERVER_PORT}:${LITESERVER_PORT}/tcp
     tty: true
     volumes:
       - ton:/var/ton-work
