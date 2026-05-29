@@ -53,7 +53,6 @@ version() {
   case "${__value}" in
     *ton.yml* )
       echo "TON_DOCKER_TAG: $(grep -E '^TON_DOCKER_TAG=' "${__env_file}" | cut -d '=' -f2)"
-      __docompose exec ton validator-engine -V || true
       ;;
   esac
 }
@@ -83,8 +82,6 @@ get-liteserver-url(){
   __var="LITESERVER_PORT"
   __get_value_from_env "${__var}" "${__env_file}" "__port"
 
-  echo
-  echo
   echo
   echo "liteserver://${LITESERVER_KEY}@${__public_ip}:${__port}"
 }
