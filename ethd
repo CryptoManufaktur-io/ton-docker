@@ -78,7 +78,7 @@ status(){
 
 get-liteserver-url(){
   LITESERVER_KEY=$(
-    docker compose exec -T ton-node sh -c '
+    docker compose exec -T ton sh -c '
     if [ ! -f /usr/bin/ton/local.config.json ]; then
         echo "installer clcf" | mytonctrl
     fi
