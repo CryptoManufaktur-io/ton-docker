@@ -98,6 +98,31 @@ get-liteserver-url(){
   echo "liteserver://${LITESERVER_KEY}@${__public_ip}:${__port}"
 }
 
+test-liteserver() {
+  LITESERVER_KEY=$(
+    docker compose exec -T ton sh -c '
+    if [ ! -f /usr/bin/ton/local.config.json ]; then
+        echo "installer clcf" | mytonctrl
+    fi
+
+    jq -r ".liteservers[0].id.key" /usr/bin/ton/local.config.json
+    '
+  )
+
+  __public_ip="$(wget -4 -qO- https://ifconfig.me/ip)"
+
+  __var="LITESERVER_PORT"
+  __get_value_from_env "${__var}" "${__env_file}" "__port"
+
+  docker run --rm \
+  -v "$PWD/scripts/test.py:/app/check_liteserver.py:ro" \
+  -e SERVER_IP="$__public_ip" \
+  -e SERVER_PORT="$LITESERVER_PORT" \
+  -e SERVER_PUBKEY="$LITESERVER_KEY" \
+  python:3.11-slim \
+  sh -c "pip install -q pytoniq && python /app/check_liteserver.py"
+}
+
 __prep_conffiles() {
   # Adjust - this is where sample files would be copied to config files that are meant to be bind-mounted
   return
@@ -1174,6 +1199,8 @@ __full_help() {
   echo "    Upgrade ton node"
   echo "  get-liteserver-url"
   echo "    Gets the full lightserver URL"
+  echo "  test-liteserver"
+  echo "    Test liteserver with python script"
   echo "  help"
   echo "    print this help screen"
   echo
@@ -1271,7 +1298,7 @@ if ! __docompose --help >/dev/null 2>&1; then
 fi
 
 case "$__command" in
-  help|update|up|start|down|stop|restart|version|logs|cmd|terminate|space|check-sync|do-upgrade|status|get-liteserver-url)
+  help|update|up|start|down|stop|restart|version|logs|cmd|terminate|space|check-sync|do-upgrade|status|get-liteserver-url|test-liteserver)
     $__command "$@";;
   *)
     echo "Unrecognized command $__command"
