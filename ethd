@@ -2,8 +2,8 @@
 set -Eeuo pipefail
 
 __project_name="Ton Docker"
-__app_name="ton node"
-__sample_service="ton-node"
+__app_name="ton"
+__sample_service="ton"
 __docker_exe="docker"
 __old_docker=0
 __docker_sudo=""
@@ -58,22 +58,22 @@ version() {
 # Avoid the use of ;;&
   case "${__value}" in
     *ton.yml* )
-      __docompose exec ton-node /bin/bash -lc 'echo "status" | mytonctrl'
+      __docompose exec ton /bin/bash -lc 'echo "status" | mytonctrl'
       ;;
   esac
 }
 
 do-upgrade() {
-  __docompose exec ton-node /bin/bash -lc 'echo "update master" | mytonctrl'
-  __docompose exec ton-node /bin/bash -lc 'echo "upgrade master" | mytonctrl'
+  __docompose exec ton /bin/bash -lc 'echo "update master" | mytonctrl'
+  __docompose exec ton /bin/bash -lc 'echo "upgrade master" | mytonctrl'
 }
 
 check-sync() {
-  __docompose exec ton-node /bin/bash -lc 'echo "status" | mytonctrl'
+  __docompose exec ton /bin/bash -lc 'echo "status" | mytonctrl'
 }
 
 status(){
-  __docompose exec ton-node /bin/bash -lc 'echo "status" | mytonctrl'
+  __docompose exec ton /bin/bash -lc 'echo "status" | mytonctrl'
 }
 
 get-liteserver-url(){
