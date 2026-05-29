@@ -117,7 +117,7 @@ test-liteserver() {
   docker run --rm \
   -v "$PWD/scripts/test.py:/app/check_liteserver.py:ro" \
   -e SERVER_IP="$__public_ip" \
-  -e SERVER_PORT="$LITESERVER_PORT" \
+  -e SERVER_PORT="$__port" \
   -e SERVER_PUBKEY="$LITESERVER_KEY" \
   python:3.11-slim \
   sh -c "pip install -q pytoniq && python /app/check_liteserver.py"
