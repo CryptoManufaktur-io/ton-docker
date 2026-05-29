@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-__project_name="X Docker"
-__app_name="X node"
-__sample_service="X-geth"
+__project_name="Ton Docker"
+__app_name="ton node"
+__sample_service="ton"
 __docker_exe="docker"
 __old_docker=0
 __docker_sudo=""
@@ -58,6 +58,57 @@ version() {
   esac
 }
 
+check-sync() {
+  __docompose exec ton /bin/bash -lc 'echo "status" | mytonctrl'
+}
+
+status(){
+  __docompose exec ton /bin/bash -lc 'echo "status" | mytonctrl'
+}
+
+do-upgrade() {
+  __docompose exec ton /bin/bash -lc 'echo "update master" | mytonctrl'
+  __docompose exec ton /bin/bash -lc 'echo "upgrade master" | mytonctrl'
+}
+
+get-liteserver-url(){
+  LITESERVER_KEY=$(
+    docker compose exec -T ton sh -c '
+    jq -r ".liteservers[0].id.key" /ton-config-export/local.config.json
+    '
+  )
+
+  __public_ip="$(wget -4 -qO- https://ifconfig.me/ip)"
+
+  __var="LITESERVER_PORT"
+  __get_value_from_env "${__var}" "${__env_file}" "__port"
+
+  echo
+  echo
+  echo
+  echo "liteserver://${LITESERVER_KEY}@${__public_ip}:${__port}"
+}
+
+test-liteserver() {
+  LITESERVER_KEY=$(
+    docker compose exec -T ton sh -c '
+    jq -r ".liteservers[0].id.key" /ton-config-export/local.config.json
+    '
+  )
+
+  __public_ip="$(wget -4 -qO- https://ifconfig.me/ip)"
+
+  __var="LITESERVER_PORT"
+  __get_value_from_env "${__var}" "${__env_file}" "__port"
+
+  docker run --rm \
+  -v "$PWD/scripts/test.py:/app/check_liteserver.py:ro" \
+  -e SERVER_IP="$__public_ip" \
+  -e SERVER_PORT="$__port" \
+  -e SERVER_PUBKEY="$LITESERVER_KEY" \
+  python:3.11-slim \
+  sh -c "pip install -q pytoniq && python /app/check_liteserver.py"
+}
 
 __prep_conffiles() {
   return
@@ -1022,12 +1073,6 @@ cmd() {
   __docompose "$@"
 }
 
-
-check-sync() {
-  bash scripts/check-sync.sh "$@" || true
-}
-
-
 terminate() {
   # Assume project name and volume are delimited by _ and there is no _ in the volume name. Done to avoid catching project-2 while looking at project
   if [ -z "$(__dodocker volume ls -q -f "name=^$(basename "$(realpath .)" | tr '[:upper:]' '[:lower:]')_[^_]+$")" ]; then
@@ -1127,12 +1172,18 @@ __full_help() {
   echo "    shows logs"
   echo "  cmd <command>"
   echo "    executes an arbitrary Docker Compose command. Use \"cmd help\" to list them"
-  echo "  check-sync"
-  echo "    call the check sync script to check the sync status of the node"
   echo "  terminate"
   echo "    stops the ${__app_name} and destroys all data stores"
   echo "  space"
   echo "    show Docker volume space usage"
+  echo "  check-sync|status"
+  echo "    Check sync for the node"
+  echo "  do-upgrade"
+  echo "    Upgrade ton node"
+  echo "  get-liteserver-url"
+  echo "    Gets the full lightserver URL"
+  echo "  test-liteserver"
+  echo "    Test liteserver with python script"
   echo "  help"
   echo "    print this help screen"
   echo
@@ -1230,7 +1281,7 @@ if ! __docompose --help >/dev/null 2>&1; then
 fi
 
 case "$__command" in
-  help|update|up|start|down|stop|restart|version|logs|cmd|check-sync|terminate|space)
+  help|update|up|start|down|stop|restart|version|logs|cmd|terminate|space|check-sync|status|do-upgrade|get-liteserver-url|test-liteserver)
     $__command "$@";;
   *)
     echo "Unrecognized command $__command"
