@@ -2,12 +2,12 @@ import os
 import asyncio
 from pytoniq import LiteClient
 
-server_ip = int(os.environ["SERVER_IP"])
+server_ip = os.environ["SERVER_IP"]
 server_port = int(os.environ["SERVER_PORT"])
 server_pubkey = os.environ["SERVER_PUBKEY"]
 
 # Your custom liteserver config (update with your values)
-server_ip = 12345678  # Replace with your IP decimal representation. 2130706433 = localhost.
+server_ip = "127.0.0.1"
 server_port = 30003    # Replace with your port
 server_pubkey = "bbD8cX9einzbQAktAfpnudxBr71nYU6xkY63SCfi82o="  # Replace with your key
 
