@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+echo "Initial sleeping"
+sleep 120
+
 # Check if the config file has been exported
 until [[ -f "${TON_API_TONLIB_LITESERVER_CONFIG}" ]] && python3 -c "import json, sys; json.load(open(sys.argv[1]))" "${TON_API_TONLIB_LITESERVER_CONFIG}" 2>/dev/null; do
   echo "[ton-http-api] Waiting for ${TON_API_TONLIB_LITESERVER_CONFIG} to exist and be valid JSON..."
