@@ -80,7 +80,7 @@ services:
       - traefik.http.services.${RPC_HOST:-ton}.loadbalancer.healthcheck.interval=30s
     depends_on:
       ton:
-        condition: service_healthy
+        condition: service_started
     <<: *logging
 
 volumes:
