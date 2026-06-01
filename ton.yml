@@ -41,6 +41,7 @@ services:
       VALIDATOR_CONSOLE_PORT: ${VALIDATOR_CONSOLE_PORT}
     <<: *logging
 
+  # curl -X POST https://ton.DOMAIN.net/jsonRPC -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","id":"1","method":"getMasterchainInfo","params":{}}'
   ton-http-api:
     build:
       context: ./ton-http-api

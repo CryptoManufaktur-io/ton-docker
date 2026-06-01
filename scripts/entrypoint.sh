@@ -2,6 +2,7 @@
 set -e
 
 rm -f /shared/local.config.json
+rm -f /usr/bin/ton/local.config.json
 # Export config for ton-http-api if export directory is mounted
 if [[ -d "/shared" ]]; then
   (
@@ -20,17 +21,24 @@ if [[ -d "/shared" ]]; then
       sleep 10
     done
 
-    if [[ ! -f "${SOURCE_CONFIG}" ]]; then
-      echo "[ton] Generating liteserver config..."
-      if bash -c "echo 'installer clcf' | /usr/bin/mytonctrl" 2>&1 | tee /tmp/clcf.log | grep -i "created"; then
-        echo "[ton] Config generated successfully"
-      else
-        echo "[ton] Config generation output:"
-        cat /tmp/clcf.log 2>/dev/null || true
-      fi
-      sleep 5
-    else
+    if [[ -f "${SOURCE_CONFIG}" ]]; then
       echo "[ton] Config already exists at ${SOURCE_CONFIG}"
+    else
+      echo "[ton] Generating liteserver config (will retry until created)..."
+      _clcf_attempt=0
+      while [[ ! -f "${SOURCE_CONFIG}" ]]; do
+        _clcf_attempt=$(( _clcf_attempt + 1 ))
+        echo "[ton] Running installer clcf (attempt ${_clcf_attempt})..."
+        bash -c "echo 'installer clcf' | /usr/bin/mytonctrl" 2>&1 | tee /tmp/clcf.log || true
+        if [[ -f "${SOURCE_CONFIG}" ]]; then
+          echo "[ton] Config created successfully (attempt ${_clcf_attempt})"
+        else
+          echo "[ton] Config not created yet (attempt ${_clcf_attempt}), output:"
+          cat /tmp/clcf.log 2>/dev/null || true
+          echo "[ton] Retrying in 15s..."
+          sleep 15
+        fi
+      done
     fi
 
     echo "[ton] Waiting for ${SOURCE_CONFIG} to exist and be valid JSON (polling every 10s)..."
