@@ -118,6 +118,11 @@ test-liteserver() {
   __var="LITESERVER_PORT"
   __get_value_from_env "${__var}" "${__env_file}" "__port"
 
+  echo "Running test python using this values:"
+  echo "...Public IP: ${__public_ip}"
+  echo "...Server Port: ${__port}"
+  echo "...Public Key: ${LITESERVER_KEY}"
+
   docker run --rm \
   -v "$PWD/scripts/test.py:/app/check_liteserver.py:ro" \
   -e SERVER_IP="$__public_ip" \
