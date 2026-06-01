@@ -79,11 +79,11 @@ status(){
 get-liteserver-url(){
   LITESERVER_KEY=$(
     docker compose exec -T ton sh -c '
-    if [ ! -f /usr/bin/ton/local.config.json ]; then
-        echo "installer clcf" | mytonctrl
-    fi
-
-    jq -r ".liteservers[0].id.key" /usr/bin/ton/local.config.json
+      if [ -f /shared/local.config.json ]; then
+        jq -r ".liteservers[0].id.key" /shared/local.config.json
+      else
+        echo "CONFIG_FILE_NOT_SET_YET"
+      fi
     '
   )
 
@@ -101,11 +101,11 @@ get-liteserver-url(){
 test-liteserver() {
   LITESERVER_KEY=$(
     docker compose exec -T ton sh -c '
-    if [ ! -f /usr/bin/ton/local.config.json ]; then
-        echo "installer clcf" | mytonctrl
-    fi
-
-    jq -r ".liteservers[0].id.key" /usr/bin/ton/local.config.json
+      if [ -f /shared/local.config.json ]; then
+        jq -r ".liteservers[0].id.key" /shared/local.config.json
+      else
+        echo "CONFIG_FILE_NOT_SET_YET"
+      fi
     '
   )
 

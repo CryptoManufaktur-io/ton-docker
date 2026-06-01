@@ -15,9 +15,13 @@ services:
     pull_policy: never
     restart: unless-stopped
     tty: true
+    ports:
+      - ${VALIDATOR_PORT}:${VALIDATOR_PORT}/tcp
+      - ${LITESERVER_PORT}:${LITESERVER_PORT}/tcp
     volumes:
       - ton:/var/ton-work
       - mytoncore:/usr/local/bin/mytoncore
+      - shared:/shared
     environment:
       PIP_BREAK_SYSTEM_PACKAGES: 1
       TON_BRANCH: ${TON_BRANCH}
@@ -36,7 +40,50 @@ services:
       LITESERVER_PORT: ${LITESERVER_PORT}
       VALIDATOR_CONSOLE_PORT: ${VALIDATOR_CONSOLE_PORT}
     <<: *logging
-        
+
+  ton-http-api:
+    build:
+      context: ./ton-http-api
+      dockerfile: Dockerfile.api
+    image: ton-http-api:local
+    pull_policy: never
+    restart: unless-stopped
+    environment:
+      - TON_API_CACHE_ENABLED=${TON_API_CACHE_ENABLED:-0}
+      - TON_API_LOGS_JSONIFY=${TON_API_LOGS_JSONIFY:-0}
+      - TON_API_LOGS_LEVEL=${TON_API_LOGS_LEVEL:-INFO}
+      - TON_API_TONLIB_LITESERVER_CONFIG=/shared/local.config.json
+      - TON_API_TONLIB_KEYSTORE=/tmp/ton_keystore/
+      - TON_API_TONLIB_PARALLEL_REQUESTS_PER_LITESERVER=${TON_API_TONLIB_PARALLEL_REQUESTS_PER_LITESERVER:-50}
+      - TON_API_TONLIB_REQUEST_TIMEOUT=${TON_API_TONLIB_REQUEST_TIMEOUT:-10}
+      - TON_API_GET_METHODS_ENABLED=${TON_API_GET_METHODS_ENABLED:-1}
+      - TON_API_JSON_RPC_ENABLED=${TON_API_JSON_RPC_ENABLED:-1}
+      - TON_API_ROOT_PATH=${TON_API_ROOT_PATH:-/}
+      - TON_API_WEBSERVERS_WORKERS=${TON_API_WEBSERVERS_WORKERS:-1}
+      - TON_API_GUNICORN_FLAGS=${TON_API_GUNICORN_FLAGS:-}
+    volumes:
+      - shared:/shared
+    healthcheck:
+      test: curl -sS http://127.0.0.1:8081${TON_API_ROOT_PATH:-/}healthcheck || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 24h
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.${RPC_HOST:-ton}.service=${RPC_HOST:-ton}
+      - traefik.http.routers.${RPC_HOST:-ton}.entrypoints=websecure
+      - traefik.http.routers.${RPC_HOST:-ton}.rule=Host(`${RPC_HOST:-ton}.${DOMAIN}`)
+      - traefik.http.routers.${RPC_HOST:-ton}.tls.certresolver=letsencrypt
+      - traefik.http.services.${RPC_HOST:-ton}.loadbalancer.server.port=8081
+      - traefik.http.services.${RPC_HOST:-ton}.loadbalancer.healthcheck.path=${TON_API_ROOT_PATH:-/}healthcheck
+      - traefik.http.services.${RPC_HOST:-ton}.loadbalancer.healthcheck.interval=30s
+    depends_on:
+      ton:
+        condition: service_started
+    <<: *logging
+
 volumes:
   ton:
   mytoncore:
+  shared:
