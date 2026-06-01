@@ -68,6 +68,10 @@ do-upgrade() {
   __docompose exec ton /bin/bash -lc 'echo "upgrade master" | mytonctrl'
 }
 
+mytonctrl() {
+  __docompose exec ton /bin/bash mytonctrl
+}
+
 check-sync() {
   __docompose exec ton /bin/bash -lc 'echo "status" | mytonctrl'
 }
@@ -1200,6 +1204,8 @@ __full_help() {
   echo "    Gets the full lightserver URL"
   echo "  test-liteserver"
   echo "    Test liteserver with python script"
+  echo "  mytonctrl"
+  echo "    Open mytonctrl interactive"
   echo "  help"
   echo "    print this help screen"
   echo
@@ -1297,7 +1303,7 @@ if ! __docompose --help >/dev/null 2>&1; then
 fi
 
 case "$__command" in
-  help|update|up|start|down|stop|restart|version|logs|cmd|terminate|space|check-sync|do-upgrade|status|get-liteserver-url|test-liteserver)
+  help|update|up|start|down|stop|restart|version|logs|cmd|terminate|space|check-sync|do-upgrade|status|get-liteserver-url|test-liteserver|mytonctrl)
     $__command "$@";;
   *)
     echo "Unrecognized command $__command"
