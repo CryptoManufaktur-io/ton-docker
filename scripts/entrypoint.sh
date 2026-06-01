@@ -1,6 +1,68 @@
 #!/bin/bash
 set -e
 
+rm -f /shared/local.config.json
+# Export config for ton-http-api if export directory is mounted
+if [[ -d "/shared" ]]; then
+  (
+    SOURCE_CONFIG="/usr/bin/ton/local.config.json"
+    EXPORT_CONFIG="/shared/local.config.json"
+
+    echo "[ton] Waiting for mytonctrl to be ready (polling every 10s)..."
+    _attempt=0
+    while true; do
+      _attempt=$(( _attempt + 1 ))
+      if bash -c "echo 'exit' | timeout 10 /usr/bin/mytonctrl" >/dev/null 2>&1; then
+        echo "[ton] mytonctrl is ready (attempt ${_attempt})"
+        break
+      fi
+      echo "[ton] mytonctrl not ready yet (attempt ${_attempt}), retrying in 10s..."
+      sleep 10
+    done
+
+    if [[ ! -f "${SOURCE_CONFIG}" ]]; then
+      echo "[ton] Generating liteserver config..."
+      if bash -c "echo 'installer clcf' | /usr/bin/mytonctrl" 2>&1 | tee /tmp/clcf.log | grep -i "created"; then
+        echo "[ton] Config generated successfully"
+      else
+        echo "[ton] Config generation output:"
+        cat /tmp/clcf.log 2>/dev/null || true
+      fi
+      sleep 5
+    else
+      echo "[ton] Config already exists at ${SOURCE_CONFIG}"
+    fi
+
+    echo "[ton] Waiting for ${SOURCE_CONFIG} to exist and be valid JSON (polling every 10s)..."
+    _attempt=0
+    while true; do
+      _attempt=$(( _attempt + 1 ))
+      if [[ -f "${SOURCE_CONFIG}" ]]; then
+        if jq empty "${SOURCE_CONFIG}" 2>/dev/null; then
+          cp "${SOURCE_CONFIG}" "${EXPORT_CONFIG}"
+          chmod 644 "${EXPORT_CONFIG}"
+          echo "[ton] Config exported to ${EXPORT_CONFIG} (attempt ${_attempt})"
+
+          while true; do
+            sleep 60
+            if [[ "${SOURCE_CONFIG}" -nt "${EXPORT_CONFIG}" ]] && jq empty "${SOURCE_CONFIG}" 2>/dev/null; then
+              cp "${SOURCE_CONFIG}" "${EXPORT_CONFIG}"
+              echo "[ton] Config updated"
+            fi
+          done
+          exit 0
+        else
+          echo "[ton] ${SOURCE_CONFIG} exists but is not valid JSON yet (attempt ${_attempt}), retrying in 10s..."
+        fi
+      else
+        echo "[ton] ${SOURCE_CONFIG} does not exist yet (attempt ${_attempt}), retrying in 10s..."
+      fi
+      sleep 10
+    done
+  ) &
+fi
+
+
 TON_BRANCH=${TON_BRANCH:-latest}
 GLOBAL_CONFIG_URL=${GLOBAL_CONFIG_URL:-https://ton.org/global.config.json}
 ARCHIVE_TTL=${ARCHIVE_TTL:-86400}
@@ -597,65 +659,4 @@ if [ "${first_install}" = true ]; then
 fi
 
 echo "Service started!"
-
-# Export config for ton-http-api if export directory is mounted
-if [[ -d "/shared" ]]; then
-  (
-    SOURCE_CONFIG="/usr/bin/ton/local.config.json"
-    EXPORT_CONFIG="/shared/local.config.json"
-
-    echo "[ton] Waiting for mytonctrl to be ready (polling every 10s)..."
-    _attempt=0
-    while true; do
-      _attempt=$(( _attempt + 1 ))
-      if bash -c "echo 'exit' | timeout 10 /usr/bin/mytonctrl" >/dev/null 2>&1; then
-        echo "[ton] mytonctrl is ready (attempt ${_attempt})"
-        break
-      fi
-      echo "[ton] mytonctrl not ready yet (attempt ${_attempt}), retrying in 10s..."
-      sleep 10
-    done
-
-    if [[ ! -f "${SOURCE_CONFIG}" ]]; then
-      echo "[ton] Generating liteserver config..."
-      if bash -c "echo 'installer clcf' | /usr/bin/mytonctrl" 2>&1 | tee /tmp/clcf.log | grep -i "created"; then
-        echo "[ton] Config generated successfully"
-      else
-        echo "[ton] Config generation output:"
-        cat /tmp/clcf.log 2>/dev/null || true
-      fi
-      sleep 5
-    else
-      echo "[ton] Config already exists at ${SOURCE_CONFIG}"
-    fi
-
-    echo "[ton] Waiting for ${SOURCE_CONFIG} to exist and be valid JSON (polling every 10s)..."
-    _attempt=0
-    while true; do
-      _attempt=$(( _attempt + 1 ))
-      if [[ -f "${SOURCE_CONFIG}" ]]; then
-        if jq empty "${SOURCE_CONFIG}" 2>/dev/null; then
-          cp "${SOURCE_CONFIG}" "${EXPORT_CONFIG}"
-          chmod 644 "${EXPORT_CONFIG}"
-          echo "[ton] Config exported to ${EXPORT_CONFIG} (attempt ${_attempt})"
-
-          while true; do
-            sleep 60
-            if [[ "${SOURCE_CONFIG}" -nt "${EXPORT_CONFIG}" ]] && jq empty "${SOURCE_CONFIG}" 2>/dev/null; then
-              cp "${SOURCE_CONFIG}" "${EXPORT_CONFIG}"
-              echo "[ton] Config updated"
-            fi
-          done
-          exit 0
-        else
-          echo "[ton] ${SOURCE_CONFIG} exists but is not valid JSON yet (attempt ${_attempt}), retrying in 10s..."
-        fi
-      else
-        echo "[ton] ${SOURCE_CONFIG} does not exist yet (attempt ${_attempt}), retrying in 10s..."
-      fi
-      sleep 10
-    done
-  ) &
-fi
-
 exec "${SYSTEMCTL_BIN}"
