@@ -72,13 +72,18 @@ services:
       start_period: 24h
     labels:
       - traefik.enable=true
+
+      # rpc
       - traefik.http.routers.${RPC_HOST:-ton}.service=${RPC_HOST:-ton}
       - traefik.http.routers.${RPC_HOST:-ton}.entrypoints=websecure
       - traefik.http.routers.${RPC_HOST:-ton}.rule=Host(`${RPC_HOST:-ton}.${DOMAIN}`)
       - traefik.http.routers.${RPC_HOST:-ton}.tls.certresolver=letsencrypt
+      - traefik.http.routers.${RPC_HOST:-ton}lb.service=${RPC_HOST:-ton}
+      - traefik.http.routers.${RPC_HOST:-ton}lb.entrypoints=websecure
+      - traefik.http.routers.${RPC_HOST:-ton}lb.rule=Host(`${RPC_LB:-ton-lb}.${DOMAIN}`)
+      - traefik.http.routers.${RPC_HOST:-ton}lb.tls.certresolver=letsencrypt
       - traefik.http.services.${RPC_HOST:-ton}.loadbalancer.server.port=8081
       - traefik.http.services.${RPC_HOST:-ton}.loadbalancer.healthcheck.path=${TON_API_ROOT_PATH:-/}healthcheck
-      - traefik.http.services.${RPC_HOST:-ton}.loadbalancer.healthcheck.interval=30s
     depends_on:
       ton:
         condition: service_started
