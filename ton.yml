@@ -7,70 +7,89 @@ x-logging: &logging
       tag: '{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}'
 
 services:
-  ton-init:
-    restart: "no"
-    build:
-      context: ./init
-      dockerfile: Dockerfile
-    image: init:ton
-    pull_policy: never
-    environment:
-      - SNAPSHOT=${SNAPSHOT:-}
-      - GLOBAL_CONFIG_URL=${GLOBAL_CONFIG_URL:-https://ton.org/global.config.json}
-    volumes:
-      - ton-work:/var/ton-work
-      - /etc/localtime:/etc/localtime:ro
-    <<: *logging
-
   ton:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    image: ton:fixed
+    pull_policy: never
     restart: unless-stopped
     tty: true
-    build:
-      context: ./ton
-      dockerfile: ${TON_DOCKERFILE:-Dockerfile.binary}
-      args:
-        - DOCKER_TAG=${TON_DOCKER_TAG}
-        - DOCKER_REPO=${TON_DOCKER_REPO}
-    image: ton:${TON_BRANCH:-latest}
-    pull_policy: never
-    stop_grace_period: 5m
-    environment:
-      - TON_BRANCH=${TON_BRANCH:-latest}
-      - PUBLIC_IP=${PUBLIC_IP:-}
-      - GLOBAL_CONFIG_URL=${GLOBAL_CONFIG_URL}
-      - MYTONCTRL_VERSION=${MYTONCTRL_VERSION:-master}
-      - TELEMETRY=${TELEMETRY:-true}
-      - IGNORE_MINIMAL_REQS=${IGNORE_MINIMAL_REQS:-true}
-      - MODE=${MODE:-liteserver}
-      - ARCHIVE_TTL=${ARCHIVE_TTL:-2592000}
-      - STATE_TTL=${STATE_TTL:-86400}
-      - VERBOSITY=${VERBOSITY:-1}
-      - LITESERVER_PORT=${LITESERVER_PORT:-}
-      - VALIDATOR_PORT=${VALIDATOR_PORT:-}
-      - VALIDATOR_CONSOLE_PORT=${VALIDATOR_CONSOLE_PORT:-}
-    volumes:
-      - ton-work:/var/ton-work
-      - mytoncore:/usr/local/bin/mytoncore
-      - ton-systemd:/etc/systemd/system
-      - /etc/localtime:/etc/localtime:ro
     ports:
-      - ${VALIDATOR_PORT:-30001}:${VALIDATOR_PORT:-30001}/udp
+      - ${VALIDATOR_PORT}:${VALIDATOR_PORT}/tcp
+      - ${LITESERVER_PORT}:${LITESERVER_PORT}/tcp
+    volumes:
+      - ton:/var/ton-work
+      - mytoncore:/usr/local/bin/mytoncore
+      - shared:/shared
+    environment:
+      PIP_BREAK_SYSTEM_PACKAGES: 1
+      TON_BRANCH: ${TON_BRANCH}
+      GLOBAL_CONFIG_URL: ${GLOBAL_CONFIG_URL}
+      IGNORE_MINIMAL_REQS: ${IGNORE_MINIMAL_REQS}
+      MYTONCTRL_VERSION: ${MYTONCTRL_VERSION}
+      DUMP: ${DUMP}
+      MODE: ${MODE}
+      ARCHIVE_TTL: ${ARCHIVE_TTL}
+      STATE_TTL: ${STATE_TTL}
+      SYNC_BEFORE: ${SYNC_BEFORE}
+      VERBOSITY: ${VERBOSITY}
+      CUSTOM_PARAMETERS: ${CUSTOM_PARAMETERS:-}
+      PUBLIC_IP: ${PUBLIC_IP}
+      VALIDATOR_PORT: ${VALIDATOR_PORT}
+      LITESERVER_PORT: ${LITESERVER_PORT}
+      VALIDATOR_CONSOLE_PORT: ${VALIDATOR_CONSOLE_PORT}
+    <<: *logging
+
+  # curl -X POST https://ton.DOMAIN.net/jsonRPC -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","id":"1","method":"getMasterchainInfo","params":{}}'
+  ton-http-api:
+    build:
+      context: ./ton-http-api
+      dockerfile: Dockerfile.api
+    image: ton-http-api:local
+    pull_policy: never
+    restart: unless-stopped
+    environment:
+      - TON_API_CACHE_ENABLED=${TON_API_CACHE_ENABLED:-0}
+      - TON_API_LOGS_JSONIFY=${TON_API_LOGS_JSONIFY:-0}
+      - TON_API_LOGS_LEVEL=${TON_API_LOGS_LEVEL:-INFO}
+      - TON_API_TONLIB_LITESERVER_CONFIG=/shared/local.config.json
+      - TON_API_TONLIB_KEYSTORE=/tmp/ton_keystore/
+      - TON_API_TONLIB_PARALLEL_REQUESTS_PER_LITESERVER=${TON_API_TONLIB_PARALLEL_REQUESTS_PER_LITESERVER:-50}
+      - TON_API_TONLIB_REQUEST_TIMEOUT=${TON_API_TONLIB_REQUEST_TIMEOUT:-10}
+      - TON_API_GET_METHODS_ENABLED=${TON_API_GET_METHODS_ENABLED:-1}
+      - TON_API_JSON_RPC_ENABLED=${TON_API_JSON_RPC_ENABLED:-1}
+      - TON_API_ROOT_PATH=${TON_API_ROOT_PATH:-/}
+      - TON_API_WEBSERVERS_WORKERS=${TON_API_WEBSERVERS_WORKERS:-1}
+      - TON_API_GUNICORN_FLAGS=${TON_API_GUNICORN_FLAGS:-}
+    volumes:
+      - shared:/shared
+    healthcheck:
+      test: curl -sS http://127.0.0.1:8081${TON_API_ROOT_PATH:-/}healthcheck || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 24h
     labels:
       - traefik.enable=true
-      - traefik.tcp.routers.${TON_HOST:-ton}.service=${TON_HOST:-ton}
-      - traefik.tcp.routers.${TON_HOST:-ton}.entrypoints=tonls
-      - traefik.tcp.routers.${TON_HOST:-ton}.rule=HostSNI(`*`)
-      - traefik.tcp.services.${TON_HOST:-ton}.loadbalancer.server.port=${LITESERVER_PORT:-30003}
-      - traefik.tcp.routers.${TON_HOST:-ton}-console.service=${TON_HOST:-ton}-console
-      - traefik.tcp.routers.${TON_HOST:-ton}-console.entrypoints=tonvc
-      - traefik.tcp.routers.${TON_HOST:-ton}-console.rule=HostSNI(`*`)
-      - traefik.tcp.services.${TON_HOST:-ton}-console.loadbalancer.server.port=${VALIDATOR_CONSOLE_PORT:-30002}
+
+      # rpc
+      - traefik.http.routers.${RPC_HOST:-ton}.service=${RPC_HOST:-ton}
+      - traefik.http.routers.${RPC_HOST:-ton}.entrypoints=websecure
+      - traefik.http.routers.${RPC_HOST:-ton}.rule=Host(`${RPC_HOST:-ton}.${DOMAIN}`)
+      - traefik.http.routers.${RPC_HOST:-ton}.tls.certresolver=letsencrypt
+      - traefik.http.routers.${RPC_HOST:-ton}lb.service=${RPC_HOST:-ton}
+      - traefik.http.routers.${RPC_HOST:-ton}lb.entrypoints=websecure
+      - traefik.http.routers.${RPC_HOST:-ton}lb.rule=Host(`${RPC_LB:-ton-lb}.${DOMAIN}`)
+      - traefik.http.routers.${RPC_HOST:-ton}lb.tls.certresolver=letsencrypt
+      - traefik.http.services.${RPC_HOST:-ton}.loadbalancer.server.port=8081
+      - traefik.http.services.${RPC_HOST:-ton}.loadbalancer.healthcheck.path=${TON_API_ROOT_PATH:-/}healthcheck
     depends_on:
-      ton-init:
-        condition: service_completed_successfully
+      ton:
+        condition: service_started
     <<: *logging
 
 volumes:
-  ton-work:
+  ton:
   mytoncore:
-  ton-systemd:
+  shared:

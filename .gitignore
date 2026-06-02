@@ -5,13 +5,3 @@
 *.bak
 *.original
 custom.yml
-.idea/
-*.iml
-*.ipr
-*.iws
-.vscode/
-.DS_Store
-*.log
-*.tmp
-tmp/
-temp/
