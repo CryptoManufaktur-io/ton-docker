@@ -139,7 +139,7 @@ echo VALIDATOR_PORT $VALIDATOR_PORT
 echo LITESERVER_PORT $LITESERVER_PORT
 echo VALIDATOR_CONSOLE_PORT $VALIDATOR_CONSOLE_PORT
 
-PUBLIC_IP="$(wget -4 -qO- https://ifconfig.me/ip)"
+PUBLIC_IP="${PUBLIC_IP:-$(wget -4 -qO- https://ifconfig.me/ip)}"
 
 # check machine configuration
 echo
