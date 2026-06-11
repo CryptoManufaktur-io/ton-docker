@@ -16,8 +16,8 @@ services:
     restart: unless-stopped
     tty: true
     ports:
-      - ${VALIDATOR_PORT}:${VALIDATOR_PORT}/tcp
-      - ${LITESERVER_PORT}:${LITESERVER_PORT}/tcp
+      - "0.0.0.0:${VALIDATOR_PORT}:${VALIDATOR_PORT}/udp"
+      - "0.0.0.0:${LITESERVER_PORT}:${LITESERVER_PORT}/tcp"
     volumes:
       - ton:/var/ton-work
       - mytoncore:/usr/local/bin/mytoncore
