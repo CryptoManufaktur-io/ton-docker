@@ -9,7 +9,26 @@ until [[ -f "${TON_API_TONLIB_LITESERVER_CONFIG}" ]] && python3 -c "import json,
   echo "[ton-http-api] Waiting for ${TON_API_TONLIB_LITESERVER_CONFIG} to exist and be valid JSON..."
   sleep 60
 done
-# Check if the config file has been exported
+
+# The ton container writes the host's public IP into local.config.json, but containers
+# cannot reach the host's external IP from inside Docker.
+# We resolve the 'ton' service name via Docker DNS and patch the config, writing to /tmp
+# so the ton container's 60-second background loop can't overwrite our patched copy.
+TON_INTERNAL_IP=$(getent hosts ton | awk '{ print $1 }' | head -1)
+echo "[ton-http-api] Resolved 'ton' service to internal IP: ${TON_INTERNAL_IP}"
+PATCHED_CONFIG="/tmp/local.config.internal.json"
+python3 << EOF
+import json, socket, struct
+with open("${TON_API_TONLIB_LITESERVER_CONFIG}", 'r') as f:
+    config = json.load(f)
+ip_addr = "${TON_INTERNAL_IP}"
+ip_int = struct.unpack('!i', socket.inet_aton(ip_addr))[0]
+config['liteservers'][0]['ip'] = ip_int
+with open("${PATCHED_CONFIG}", 'w') as f:
+    json.dump(config, f, indent=2)
+print(f"[ton-http-api] Patched liteserver IP to {ip_addr} ({ip_int})")
+EOF
+export TON_API_TONLIB_LITESERVER_CONFIG="${PATCHED_CONFIG}"
 
 echo "[ton-http-api] Starting TON HTTP API..."
 echo "[ton-http-api] Configuration provided by ton-http-api-config service (via shared volume)"
