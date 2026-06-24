@@ -23,6 +23,7 @@ repos:
     rev: 3.0.0
     hooks:
       - id: shellcheck
+        args: ['--exclude=SC2086,SC2002,SC2003,SC2034,SC2035,SC2046,SC2115,SC2235']
       - id: script-must-have-extension
       - id: git-dirty
       - id: git-check

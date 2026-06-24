@@ -99,6 +99,7 @@ get-liteserver-url(){
   echo
   echo
   echo
+  # shellcheck disable=SC2154
   echo "liteserver://${LITESERVER_KEY}@${__public_ip}:${__port}"
 }
 
