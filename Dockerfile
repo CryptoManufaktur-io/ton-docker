@@ -2,7 +2,7 @@ ARG TON_BRANCH=latest
 FROM ghcr.io/ton-blockchain/ton:${TON_BRANCH} AS ton
 ENV DEBIAN_FRONTEND=noninteractive
 
-FROM ubuntu:24.04
+FROM ubuntu:26.04
 RUN set -eux; \
     apt update; \
     apt install -y --no-install-recommends \
