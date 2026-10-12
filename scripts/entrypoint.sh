@@ -77,6 +77,8 @@ ARCHIVE_TTL=${ARCHIVE_TTL:-86400}
 STATE_TTL=${STATE_TTL:-86400}
 VERBOSITY=${VERBOSITY:-1}
 CUSTOM_PARAMETERS=${CUSTOM_PARAMETERS:-}
+METRICS_ENABLE=${METRICS_ENABLE:-true}
+METRICS_PORT=${METRICS_PORT:-9102}
 IGNORE_MINIMAL_REQS=${IGNORE_MINIMAL_REQS:-false}
 TELEMETRY=${TELEMETRY:-true}
 DUMP=${DUMP:-false}
@@ -132,6 +134,8 @@ echo ARCHIVE_TTL $ARCHIVE_TTL
 echo STATE_TTL $STATE_TTL
 echo VERBOSITY $VERBOSITY
 echo CUSTOM_PARAMETERS "$CUSTOM_PARAMETERS"
+echo METRICS_ENABLE $METRICS_ENABLE
+echo METRICS_PORT $METRICS_PORT
 echo TELEMETRY $TELEMETRY
 echo MODE $MODE
 echo PUBLIC_IP $PUBLIC_IP
@@ -551,6 +555,26 @@ PY
   fi
 }
 
+# validator-engine has a native Prometheus exporter (GET /metrics), enabled only via --exporter-address.
+# Strip any previously applied flag first (the unit file is cached in the volume), so toggling
+# METRICS_ENABLE or changing METRICS_PORT is idempotent. Done before CUSTOM_PARAMETERS is appended,
+# which matches on the end of the ExecStart line.
+apply_metrics_override() {
+  if [[ "${CUSTOM_PARAMETERS}" == *--exporter-address* ]]; then
+    echo "CUSTOM_PARAMETERS already sets --exporter-address, not managing it via METRICS_ENABLE/METRICS_PORT"
+    return
+  fi
+
+  sed -i -E '/^ExecStart\s*=.*validator-engine/ s# --exporter-address[ =]\S+##g' "${VALIDATOR_SERVICE}"
+
+  if [ "${METRICS_ENABLE}" != "true" ]; then
+    echo "Prometheus exporter disabled (METRICS_ENABLE=${METRICS_ENABLE})"
+    return
+  fi
+
+  sed -i -E "/^ExecStart\s*=/ s#(validator-engine)( |\$)#\1 --exporter-address 0.0.0.0:${METRICS_PORT}\2#" "${VALIDATOR_SERVICE}"
+}
+
 apply_service_overrides() {
   ln -sf /proc/$$/fd/1 /usr/local/bin/mytoncore/mytoncore.log
   ln -sf /proc/$$/fd/1 /var/log/syslog
@@ -571,6 +595,7 @@ apply_service_overrides() {
       sed -i -e "s/--state-ttl\s[[:digit:]]\+/--state-ttl ${STATE_TTL}/g" "${VALIDATOR_SERVICE}"
     fi
 
+    apply_metrics_override
     apply_custom_parameters_override
   else
     echo "validator.service not found, skipping validator args update"
