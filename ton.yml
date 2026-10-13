@@ -39,6 +39,16 @@ services:
       VALIDATOR_PORT: ${VALIDATOR_PORT}
       LITESERVER_PORT: ${LITESERVER_PORT}
       VALIDATOR_CONSOLE_PORT: ${VALIDATOR_CONSOLE_PORT}
+      METRICS_ENABLE: ${METRICS_ENABLE:-true}
+      METRICS_PORT: ${METRICS_PORT:-9102}
+    labels:
+      # validator-engine serves /metrics on its own port (--exporter-address), not published to the host.
+      # metrics.scrape follows METRICS_ENABLE: any value other than "true" makes Prometheus skip the container.
+      - metrics.scrape=${METRICS_ENABLE:-true}
+      - metrics.path=/metrics
+      - metrics.port=${METRICS_PORT:-9102}
+      - metrics.instance=ton
+      - metrics.network=${NETWORK:-mainnet}
     <<: *logging
 
   # curl -X POST https://ton.DOMAIN.net/jsonRPC -H "Content-Type: application/json" \
