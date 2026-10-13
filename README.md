@@ -29,6 +29,20 @@ at `/metrics` on `METRICS_PORT` (default 9102, container-internal, not published
 
 `ton-http-api` has no Prometheus metrics.
 
+## Validator watchdog
+
+`validator-engine` can die as a `<defunct>` zombie (for example after the kernel OOM killer takes it) without the
+container's init restarting it. `scripts/ton-validator-watchdog.sh` detects that case and restarts the `ton` service.
+It only acts after two consecutive failed checks and not more often than every 15 minutes, and it checks that the
+validator process exists, not how far it has synced. Run it from cron on the host:
+
+```
+*/3 * * * * /path/to/ton/scripts/ton-validator-watchdog.sh
+```
+
+The container name, state directory and thresholds can be overridden with `TON_WATCHDOG_CONTAINER`,
+`TON_WATCHDOG_STATE_DIR`, `TON_WATCHDOG_COOLDOWN` and `TON_WATCHDOG_FAILS_REQUIRED`.
+
 ## Software update
 
 To update the software, run `./tond update` and then `./tond up`
