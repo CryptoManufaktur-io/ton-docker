@@ -11,6 +11,8 @@ services:
     build:
       context: ./
       dockerfile: Dockerfile
+      args:
+        TON_IMAGE_VERSION: ${TON_IMAGE_VERSION:-latest}
     image: ton:fixed
     pull_policy: never
     restart: unless-stopped
