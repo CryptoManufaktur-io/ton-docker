@@ -17,6 +17,8 @@ services:
     tty: true
     ports:
       - "0.0.0.0:${VALIDATOR_PORT}:${VALIDATOR_PORT}/udp"
+      # node v2026.10+ serves QUIC on UDP ADNL port + 1000; it must be reachable inbound
+      - "0.0.0.0:${QUIC_PORT:-31001}:${QUIC_PORT:-31001}/udp"
       - "0.0.0.0:${LITESERVER_PORT}:${LITESERVER_PORT}/tcp"
     volumes:
       - ton:/var/ton-work
