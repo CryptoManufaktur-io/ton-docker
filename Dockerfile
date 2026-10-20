@@ -1,5 +1,5 @@
-ARG TON_IMAGE_VERSION=latest
-FROM ghcr.io/ton-blockchain/ton:${TON_IMAGE_VERSION} AS ton
+ARG TON_BRANCH=latest
+FROM ghcr.io/ton-blockchain/ton:${TON_BRANCH} AS ton
 ENV DEBIAN_FRONTEND=noninteractive
 
 FROM ubuntu:24.04

@@ -47,10 +47,11 @@ The container name, state directory and thresholds can be overridden with `TON_W
 
 To update the software, run `./tond update` and then `./tond up`
 
-The validator binaries come from the upstream `ghcr.io/ton-blockchain/ton` image. By default `TON_IMAGE_VERSION=latest`,
-so every rebuild takes whatever upstream currently publishes. To stay on a known release, set `TON_IMAGE_VERSION` in
-`.env` to an architecture suffixed release tag (for example `vYYYY.MM-amd64`) and run `./tond update` and `./tond up`.
-Leave `TON_BRANCH` at `latest`: it selects the mainnet install and is not the binary version.
+The validator binaries come from the upstream `ghcr.io/ton-blockchain/ton` image, selected by `TON_BRANCH` (default
+`latest`, so every rebuild takes whatever upstream currently publishes). To stay on a known release, set `TON_BRANCH`
+in `.env` to an architecture suffixed release tag (for example `vYYYY.MM-amd64`) and run `./tond update` and `./tond up`.
+
+The network is set separately with `NETWORK` (`mainnet` or `testnet`, default `mainnet`). It is read on first install only.
 
 ## Customization
 

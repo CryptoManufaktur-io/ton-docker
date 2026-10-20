@@ -71,7 +71,11 @@ if [[ -d "/shared" ]]; then
 fi
 
 
-TON_BRANCH=${TON_BRANCH:-latest}
+NETWORK=${NETWORK:-mainnet}
+case "${NETWORK}" in
+  mainnet|testnet) ;;
+  *) echo "NETWORK must be mainnet or testnet, got '${NETWORK}'" >&2; exit 1 ;;
+esac
 GLOBAL_CONFIG_URL=${GLOBAL_CONFIG_URL:-https://ton.org/global.config.json}
 ARCHIVE_TTL=${ARCHIVE_TTL:-86400}
 STATE_TTL=${STATE_TTL:-86400}
@@ -124,7 +128,7 @@ MYTONCTRL_PYTHON_PATTERNS=(
 
 echo "Started with environment variables:"
 echo
-echo TON_BRANCH $TON_BRANCH
+echo NETWORK $NETWORK
 echo IGNORE_MINIMAL_REQS $IGNORE_MINIMAL_REQS
 echo DUMP $DUMP
 echo MYTONCTRL_VERSION $MYTONCTRL_VERSION
@@ -625,10 +629,10 @@ fi
 
 if [ "${first_install}" = true ]; then
 
-  if [ "$TON_BRANCH" == "latest" ]; then
-    branch="master"
+  if [ "$NETWORK" == "testnet" ]; then
+    branch="testnet"
   else
-    branch="$TON_BRANCH"
+    branch="master"
   fi
   cd /usr/src/ton
   git checkout -B $branch
@@ -640,7 +644,7 @@ if [ "${first_install}" = true ]; then
   if [ "$TELEMETRY" = false ]; then INSTALL_TELEMETRY_ARG="-t"; else INSTALL_TELEMETRY_ARG=""; fi
   if [ "$IGNORE_MINIMAL_REQS" = true ]; then INSTALL_IGNORE_MINIMAL_REQS_ARG="-i"; else INSTALL_IGNORE_MINIMAL_REQS_ARG=""; fi
   resolve_install_dump_arg
-  if [ "$TON_BRANCH" != "latest" ]; then INSTALL_NETWORK_ARG="-n testnet"; else INSTALL_NETWORK_ARG=""; fi
+  if [ "$NETWORK" == "testnet" ]; then INSTALL_NETWORK_ARG="-n testnet"; else INSTALL_NETWORK_ARG=""; fi
   echo
   echo /bin/bash /tmp/install.sh ${INSTALL_TELEMETRY_ARG} ${INSTALL_IGNORE_MINIMAL_REQS_ARG} -b ${MYTONCTRL_VERSION} -m ${MODE} ${INSTALL_DUMP_ARG} ${INSTALL_NETWORK_ARG}
   echo
