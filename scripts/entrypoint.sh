@@ -90,6 +90,8 @@ MODE=${MODE:-validator}
 MYTONCTRL_VERSION=${MYTONCTRL_VERSION:-master}
 TON_DB_DIR=/var/ton-work/db
 MTC_DONE_FILE=${TON_DB_DIR}/mtc_done
+MYTONCTRL_TAG_FILE=${TON_DB_DIR}/mytonctrl_tag.applied
+MYTONCTRL_TAG=${MYTONCTRL_TAG:-}
 SYSTEMD_UNITS_DIR=/var/ton-work/db/systemd-units
 VALIDATOR_SERVICE=/etc/systemd/system/validator.service
 MYTONCORE_SERVICE=/etc/systemd/system/mytoncore.service
@@ -132,6 +134,7 @@ echo NETWORK $NETWORK
 echo IGNORE_MINIMAL_REQS $IGNORE_MINIMAL_REQS
 echo DUMP $DUMP
 echo MYTONCTRL_VERSION $MYTONCTRL_VERSION
+echo MYTONCTRL_TAG $MYTONCTRL_TAG
 echo GLOBAL_CONFIG_URL $GLOBAL_CONFIG_URL
 echo ARCHIVE_BLOCKS $ARCHIVE_BLOCKS
 echo ARCHIVE_TTL $ARCHIVE_TTL
@@ -613,6 +616,32 @@ apply_service_overrides() {
   fi
 }
 
+# The installer only runs on first bootstrap and the python packages are restored from a cache, so a
+# container recreate brings back whatever mytonctrl was first installed. When MYTONCTRL_TAG is set,
+# install that tag (same steps as mytonctrl's update.sh, minus the mytoncore restart) and refresh the cache.
+# Failures are logged and ignored: the node must start even if this step does not work.
+apply_mytonctrl_tag() {
+  [ -n "${MYTONCTRL_TAG}" ] || return 0
+  if [ "$(cat "${MYTONCTRL_TAG_FILE}" 2>/dev/null)" = "${MYTONCTRL_TAG}" ]; then
+    echo "MyTonCtrl ${MYTONCTRL_TAG} already applied"
+    return 0
+  fi
+
+  echo "Applying MyTonCtrl ${MYTONCTRL_TAG}"
+  local tmp=/tmp/mytonctrl_tag_src
+  rm -rf "${tmp}"
+  if git clone -q --depth 1 --branch "${MYTONCTRL_TAG}" --recurse-submodules https://github.com/ton-blockchain/mytonctrl.git "${tmp}" \
+    && (cd "${tmp}" && python3 -m pip install -q -U "setuptools>=64" && python3 -m pip install -q -U .) \
+    && rm -rf /usr/src/mytonctrl && mkdir -p /usr/src/mytonctrl && cp -rfT "${tmp}" /usr/src/mytonctrl; then
+    persist_python_modules_to_cache
+    echo "${MYTONCTRL_TAG}" > "${MYTONCTRL_TAG_FILE}"
+    echo "MyTonCtrl ${MYTONCTRL_TAG} applied"
+  else
+    echo "WARNING: could not apply MyTonCtrl ${MYTONCTRL_TAG}, continuing with the installed version"
+  fi
+  rm -rf "${tmp}"
+}
+
 first_install=false
 bootstrap_completed=false
 
@@ -671,6 +700,7 @@ elif ! python3 -c "import mytoncore" >/dev/null 2>&1; then
 fi
 
 ensure_mytonctrl_cli
+apply_mytonctrl_tag
 ensure_service_units
 
 echo
