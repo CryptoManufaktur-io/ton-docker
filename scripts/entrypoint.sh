@@ -71,12 +71,18 @@ if [[ -d "/shared" ]]; then
 fi
 
 
-TON_BRANCH=${TON_BRANCH:-latest}
+NETWORK=${NETWORK:-mainnet}
+case "${NETWORK}" in
+  mainnet|testnet) ;;
+  *) echo "NETWORK must be mainnet or testnet, got '${NETWORK}'" >&2; exit 1 ;;
+esac
 GLOBAL_CONFIG_URL=${GLOBAL_CONFIG_URL:-https://ton.org/global.config.json}
 ARCHIVE_TTL=${ARCHIVE_TTL:-86400}
 STATE_TTL=${STATE_TTL:-86400}
 VERBOSITY=${VERBOSITY:-1}
 CUSTOM_PARAMETERS=${CUSTOM_PARAMETERS:-}
+METRICS_ENABLE=${METRICS_ENABLE:-true}
+METRICS_PORT=${METRICS_PORT:-9102}
 IGNORE_MINIMAL_REQS=${IGNORE_MINIMAL_REQS:-false}
 TELEMETRY=${TELEMETRY:-true}
 DUMP=${DUMP:-false}
@@ -122,7 +128,7 @@ MYTONCTRL_PYTHON_PATTERNS=(
 
 echo "Started with environment variables:"
 echo
-echo TON_BRANCH $TON_BRANCH
+echo NETWORK $NETWORK
 echo IGNORE_MINIMAL_REQS $IGNORE_MINIMAL_REQS
 echo DUMP $DUMP
 echo MYTONCTRL_VERSION $MYTONCTRL_VERSION
@@ -132,6 +138,8 @@ echo ARCHIVE_TTL $ARCHIVE_TTL
 echo STATE_TTL $STATE_TTL
 echo VERBOSITY $VERBOSITY
 echo CUSTOM_PARAMETERS "$CUSTOM_PARAMETERS"
+echo METRICS_ENABLE $METRICS_ENABLE
+echo METRICS_PORT $METRICS_PORT
 echo TELEMETRY $TELEMETRY
 echo MODE $MODE
 echo PUBLIC_IP $PUBLIC_IP
@@ -551,6 +559,26 @@ PY
   fi
 }
 
+# validator-engine has a native Prometheus exporter (GET /metrics), enabled only via --exporter-address.
+# Strip any previously applied flag first (the unit file is cached in the volume), so toggling
+# METRICS_ENABLE or changing METRICS_PORT is idempotent. Done before CUSTOM_PARAMETERS is appended,
+# which matches on the end of the ExecStart line.
+apply_metrics_override() {
+  if [[ "${CUSTOM_PARAMETERS}" == *--exporter-address* ]]; then
+    echo "CUSTOM_PARAMETERS already sets --exporter-address, not managing it via METRICS_ENABLE/METRICS_PORT"
+    return
+  fi
+
+  sed -i -E '/^ExecStart\s*=.*validator-engine/ s# --exporter-address[ =]\S+##g' "${VALIDATOR_SERVICE}"
+
+  if [ "${METRICS_ENABLE}" != "true" ]; then
+    echo "Prometheus exporter disabled (METRICS_ENABLE=${METRICS_ENABLE})"
+    return
+  fi
+
+  sed -i -E "/^ExecStart\s*=/ s#(validator-engine)( |\$)#\1 --exporter-address 0.0.0.0:${METRICS_PORT}\2#" "${VALIDATOR_SERVICE}"
+}
+
 apply_service_overrides() {
   ln -sf /proc/$$/fd/1 /usr/local/bin/mytoncore/mytoncore.log
   ln -sf /proc/$$/fd/1 /var/log/syslog
@@ -571,6 +599,7 @@ apply_service_overrides() {
       sed -i -e "s/--state-ttl\s[[:digit:]]\+/--state-ttl ${STATE_TTL}/g" "${VALIDATOR_SERVICE}"
     fi
 
+    apply_metrics_override
     apply_custom_parameters_override
   else
     echo "validator.service not found, skipping validator args update"
@@ -600,10 +629,10 @@ fi
 
 if [ "${first_install}" = true ]; then
 
-  if [ "$TON_BRANCH" == "latest" ]; then
-    branch="master"
+  if [ "$NETWORK" == "testnet" ]; then
+    branch="testnet"
   else
-    branch="$TON_BRANCH"
+    branch="master"
   fi
   cd /usr/src/ton
   git checkout -B $branch
@@ -615,7 +644,7 @@ if [ "${first_install}" = true ]; then
   if [ "$TELEMETRY" = false ]; then INSTALL_TELEMETRY_ARG="-t"; else INSTALL_TELEMETRY_ARG=""; fi
   if [ "$IGNORE_MINIMAL_REQS" = true ]; then INSTALL_IGNORE_MINIMAL_REQS_ARG="-i"; else INSTALL_IGNORE_MINIMAL_REQS_ARG=""; fi
   resolve_install_dump_arg
-  if [ "$TON_BRANCH" != "latest" ]; then INSTALL_NETWORK_ARG="-n testnet"; else INSTALL_NETWORK_ARG=""; fi
+  if [ "$NETWORK" == "testnet" ]; then INSTALL_NETWORK_ARG="-n testnet"; else INSTALL_NETWORK_ARG=""; fi
   echo
   echo /bin/bash /tmp/install.sh ${INSTALL_TELEMETRY_ARG} ${INSTALL_IGNORE_MINIMAL_REQS_ARG} -b ${MYTONCTRL_VERSION} -m ${MODE} ${INSTALL_DUMP_ARG} ${INSTALL_NETWORK_ARG}
   echo

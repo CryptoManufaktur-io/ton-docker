@@ -19,9 +19,39 @@ The `./tond` script can be used as a quick-start:
 
 `./tond up`
 
+## Metrics
+
+`validator-engine` has a native Prometheus exporter, enabled by the entrypoint via `--exporter-address` and served
+at `/metrics` on `METRICS_PORT` (default 9102, container-internal, not published). The `ton` service carries
+`metrics.*` labels so the Prometheus from `central-proxy-docker` scrapes it when `ext-network.yml` is in
+`COMPOSE_FILE`. Set `METRICS_ENABLE=false` to disable. Metric names start with `ton_`, see
+[METRICS.md](https://github.com/ton-blockchain/ton/blob/master/metrics/METRICS.md) upstream.
+
+`ton-http-api` has no Prometheus metrics.
+
+## Validator watchdog
+
+`validator-engine` can die as a `<defunct>` zombie (for example after the kernel OOM killer takes it) without the
+container's init restarting it. `scripts/ton-validator-watchdog.sh` detects that case and restarts the `ton` service.
+It only acts after two consecutive failed checks and not more often than every 15 minutes, and it checks that the
+validator process exists, not how far it has synced. Run it from cron on the host:
+
+```
+*/3 * * * * /path/to/ton/scripts/ton-validator-watchdog.sh
+```
+
+The container name, state directory and thresholds can be overridden with `TON_WATCHDOG_CONTAINER`,
+`TON_WATCHDOG_STATE_DIR`, `TON_WATCHDOG_COOLDOWN` and `TON_WATCHDOG_FAILS_REQUIRED`.
+
 ## Software update
 
 To update the software, run `./tond update` and then `./tond up`
+
+The validator binaries come from the upstream `ghcr.io/ton-blockchain/ton` image, selected by `TON_BRANCH` (default
+`latest`, so every rebuild takes whatever upstream currently publishes). To stay on a known release, set `TON_BRANCH`
+in `.env` to an architecture suffixed release tag (for example `vYYYY.MM-amd64`) and run `./tond update` and `./tond up`.
+
+The network is set separately with `NETWORK` (`mainnet` or `testnet`, default `mainnet`). It is read on first install only.
 
 ## Customization
 
