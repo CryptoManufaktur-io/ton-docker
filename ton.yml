@@ -103,6 +103,8 @@ services:
     depends_on:
       ton:
         condition: service_started
+        # Restart the API when compose recreates/restarts ton: it keeps a stale liteserver connection otherwise.
+        restart: true
     <<: *logging
 
 volumes:
